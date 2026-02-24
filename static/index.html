@@ -298,6 +298,35 @@
       </div>
     </div>
 
+    <!-- ✅ NOVO: PAINEL DA PARTIDA -->
+    <div class="card">
+      <h3 style="margin:0 0 8px;">Painel da Partida</h3>
+      <p class="subtitle" style="margin:0 0 12px;">
+        Histórico das rodadas + gráfico do total de bolinhas. (Enquanto a página estiver aberta.)
+      </p>
+
+      <div class="row" style="align-items:center;">
+        <span class="pill" id="panelPhase">fase: -</span>
+        <span class="pill" id="panelRound">rodada: -</span>
+        <span class="pill" id="panelTurn">vez: -</span>
+        <button id="clearHistory">Limpar histórico</button>
+      </div>
+
+      <div style="margin-top:12px;">
+        <canvas id="roundChart" width="980" height="220" style="
+          width: 100%;
+          max-width: 100%;
+          background: rgba(255,255,255,0.04);
+          border: 1px solid rgba(255,255,255,0.10);
+          border-radius: 14px;
+        "></canvas>
+      </div>
+
+      <div class="sep"></div>
+
+      <div id="roundHistory" style="display:grid; gap:10px;"></div>
+    </div>
+
     <div class="card">
       <h3 style="margin:0 0 8px;">Jogadores</h3>
       <div id="players" class="playersGrid"></div>
@@ -350,6 +379,157 @@
   let overlayTimeout = null;
   let overlayInterval = null;
 
+  // =====================
+  // Painel da Partida
+  // =====================
+  const matchHistory = []; // [{ round_num, total, winner, hands, guesses, game_over }]
+  const MAX_HISTORY = 50;
+
+  function setPanelMeta(s){
+    $("panelPhase").textContent = `fase: ${s.phase ?? "-"}`;
+    $("panelRound").textContent = `rodada: ${s.round_num ?? "-"}`;
+    $("panelTurn").textContent = s.turn_player_name ? `vez: ${s.turn_player_name}` : "vez: -";
+  }
+
+  function pushRevealToHistory(revealMsg){
+    if (!revealMsg || !revealMsg.result) return;
+
+    const r = revealMsg.result;
+    matchHistory.push({
+      round_num: r.round_num,
+      total: r.total,
+      winner: r.winner || null,
+      hands: r.hands || {},
+      guesses: r.guesses || {},
+      game_over: revealMsg.game_over || null
+    });
+
+    while (matchHistory.length > MAX_HISTORY) matchHistory.shift();
+
+    renderHistory();
+    drawRoundChart();
+  }
+
+  function renderHistory(){
+    const box = $("roundHistory");
+    box.innerHTML = "";
+
+    if (!matchHistory.length){
+      box.innerHTML = `<p class="subtitle" style="margin:0;">Sem rodadas ainda. Assim que rolar uma revelação, aparece aqui.</p>`;
+      return;
+    }
+
+    const reversed = [...matchHistory].reverse();
+
+    for (const item of reversed){
+      const card = document.createElement("div");
+      card.style.cssText = `
+        border: 1px solid rgba(255,255,255,0.10);
+        background: rgba(255,255,255,0.05);
+        border-radius: 14px;
+        padding: 12px;
+      `;
+
+      const winnerLine = item.winner
+        ? `🏆 <b>${item.winner}</b> acertou e perdeu 1 bolinha.`
+        : `Ninguém acertou nesta rodada.`;
+
+      const go = item.game_over
+        ? `<div style="margin-top:8px; color: rgba(255,255,255,0.90);">
+             🧨 <b>Fim de jogo</b> — Perdedor: <b>${item.game_over.loser ?? "?"}</b>
+           </div>`
+        : "";
+
+      const handsTxt = Object.entries(item.hands).map(([n,v]) => `${n}: ${v}`).join(" • ") || "-";
+      const guessesTxt = Object.entries(item.guesses).map(([n,v]) => `${n}: ${v}`).join(" • ") || "-";
+
+      card.innerHTML = `
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+          <span class="pill">Rodada <b>${item.round_num}</b></span>
+          <span class="pill">Total: <b>${item.total}</b></span>
+          <span class="pill">${winnerLine}</span>
+        </div>
+        <div class="subtitle" style="margin-top:10px;">
+          <b>Mãos:</b> ${handsTxt}
+        </div>
+        <div class="subtitle" style="margin-top:6px;">
+          <b>Palpites:</b> ${guessesTxt}
+        </div>
+        ${go}
+      `;
+
+      box.appendChild(card);
+    }
+  }
+
+  function drawRoundChart(){
+    const c = $("roundChart");
+    const ctx = c.getContext("2d");
+
+    const W = c.width;
+    const H = c.height;
+
+    ctx.clearRect(0,0,W,H);
+
+    ctx.fillStyle = "rgba(255,255,255,0.02)";
+    ctx.fillRect(0,0,W,H);
+
+    if (!matchHistory.length){
+      ctx.fillStyle = "rgba(255,255,255,0.65)";
+      ctx.font = "16px system-ui";
+      ctx.fillText("Sem dados ainda (aguardando rodadas)...", 18, 40);
+      return;
+    }
+
+    const data = matchHistory.slice(-12); // últimas 12
+    const maxVal = Math.max(...data.map(x => x.total), 1);
+
+    const pad = 22;
+    const chartW = W - pad*2;
+    const chartH = H - pad*2 - 18;
+
+    ctx.strokeStyle = "rgba(255,255,255,0.15)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(pad, pad);
+    ctx.lineTo(pad, pad + chartH);
+    ctx.lineTo(pad + chartW, pad + chartH);
+    ctx.stroke();
+
+    const n = data.length;
+    const gap = 10;
+    const barW = Math.max(18, Math.floor((chartW - gap*(n-1)) / n));
+
+    for (let i=0; i<n; i++){
+      const item = data[i];
+      const frac = item.total / maxVal;
+      const bh = Math.floor(chartH * frac);
+      const x = pad + i*(barW + gap);
+      const y = pad + chartH - bh;
+
+      ctx.fillStyle = "rgba(255,255,255,0.82)";
+      ctx.fillRect(x, y, barW, bh);
+
+      ctx.fillStyle = "rgba(255,255,255,0.65)";
+      ctx.font = "12px system-ui";
+      ctx.fillText(String(item.round_num), x + 4, pad + chartH + 14);
+
+      ctx.fillStyle = "rgba(255,255,255,0.85)";
+      ctx.fillText(String(item.total), x + 4, y - 6);
+    }
+
+    ctx.fillStyle = "rgba(255,255,255,0.85)";
+    ctx.font = "14px system-ui";
+    ctx.fillText("Total de bolinhas por rodada (últimas 12)", pad, 18);
+  }
+
+  $("clearHistory").onclick = () => {
+    matchHistory.length = 0;
+    renderHistory();
+    drawRoundChart();
+  };
+
+  // ===== util =====
   function setError(msg = "") { $("err").textContent = msg; }
   function setHint(msg = "") { $("hint").textContent = msg; }
 
@@ -506,7 +686,6 @@
       barWrap.appendChild(barFill);
       rb.appendChild(barWrap);
 
-      // botão expulsar (host)
       if (isHost() && p.player_id !== playerId) {
         const kick = document.createElement("button");
         kick.className = "kickBtn";
@@ -550,6 +729,9 @@
     $("roomPill").textContent = `sala: ${s.room_id || "-"}`;
     $("turnPill").textContent = s.turn_player_name ? `vez: ${s.turn_player_name}` : "vez: -";
 
+    // ✅ painel meta
+    setPanelMeta(s);
+
     $("start").disabled = !(s.phase === "lobby" && isHost());
     $("restart").disabled = !isHost();
     $("skip").disabled = !(isHost() && (s.phase === "hands" || s.phase === "guesses"));
@@ -587,208 +769,4 @@
     if (s.phase === "hands") {
       if (me.hand_submitted) {
         showBoxes({ waiting: true });
-        $("waitingText").textContent = `Você já enviou sua mão. Aguardando... (Vez de: ${s.turn_player_name || "?"})`;
-        return;
-      }
-      if (s.turn_player_id !== me.player_id) {
-        showBoxes({ waiting: true });
-        $("waitingText").textContent = `Aguardando... agora é a vez de ${s.turn_player_name || "alguém"}.`;
-        return;
-      }
-
-      const maxHand = Math.min(3, me.balls_left);
-      $("hand").max = String(maxHand);
-      $("hand").value = "0";
-      renderHandQuick(maxHand);
-      showBoxes({ hand: true });
-      return;
-    }
-
-    if (s.phase === "guesses") {
-      if (me.guess_submitted) {
-        showBoxes({ waiting: true });
-        $("waitingText").textContent = `Você já enviou seu palpite. Aguardando... (Vez de: ${s.turn_player_name || "?"})`;
-        return;
-      }
-      if (s.turn_player_id !== me.player_id) {
-        showBoxes({ waiting: true });
-        $("waitingText").textContent = `Aguardando... agora é a vez de ${s.turn_player_name || "alguém"}.`;
-        return;
-      }
-
-      $("guess").min = "0";
-      $("guess").max = String(s.max_guess ?? 0);
-      $("guess").value = "0";
-      showBoxes({ guess: true });
-      return;
-    }
-
-    showBoxes({ waiting: true });
-    $("waitingText").textContent = s.phase === "over"
-      ? (isHost() ? "Fim de jogo. Você pode reiniciar se quiser." : "Fim de jogo. Aguarde o host reiniciar.")
-      : "Revelando resultado...";
-  }
-
-  // ===== conexão + reconexão =====
-  function stopPing(){
-    if (pingTimer) clearInterval(pingTimer);
-    pingTimer = null;
-  }
-
-  function startPing(){
-    stopPing();
-    pingTimer = setInterval(() => {
-      if (ws && ws.readyState === 1) {
-        try { ws.send(JSON.stringify({ type: "ping" })); } catch {}
-      }
-    }, 20000); // 20s
-  }
-
-  function scheduleReconnect(immediate=false){
-    if (manualClose) return;
-
-    clearTimeout(reconnectTimer);
-    const base = immediate ? 200 : 600;
-    const delay = Math.min(15000, base * Math.pow(2, reconnectAttempts)) + Math.floor(Math.random() * 400);
-    reconnectAttempts++;
-
-    setHint(`Reconectando em ${Math.ceil(delay/1000)}s...`);
-    reconnectTimer = setTimeout(() => {
-      if (!manualClose) connect(true);
-    }, delay);
-  }
-
-  function connect(isAuto=false) {
-    setError("");
-
-    const name = ($("name").value || "Jogador").trim();
-    const room = currentRoom();
-    if (!room) { setError("Informe uma sala ou clique em Criar sala."); return; }
-
-    const storedKey = localStorage.getItem(roomKeyStorageKey(room));
-    const keyParam = storedKey ? `&key=${encodeURIComponent(storedKey)}` : "";
-
-    const proto = location.protocol === "https:" ? "wss" : "ws";
-    const url = `${proto}://${location.host}/ws/${room}?name=${encodeURIComponent(name)}${keyParam}`;
-
-    try {
-      if (ws && ws.readyState === 1) ws.close();
-    } catch {}
-
-    ws = new WebSocket(url);
-
-    ws.onopen = () => {
-      setConnected(true);
-      reconnectAttempts = 0;
-      if (isAuto) setHint("Reconectado ✅");
-      else setHint(`Conectado na sala ${room}.`);
-      startPing();
-    };
-
-    ws.onclose = () => {
-      setConnected(false);
-      stopPing();
-      if (!manualClose) scheduleReconnect(false);
-    };
-
-    ws.onerror = () => {
-      setError("Erro no WebSocket.");
-    };
-
-    ws.onmessage = (ev) => {
-      const msg = JSON.parse(ev.data);
-
-      if (msg.type === "error") { setError(msg.message); return; }
-      if (msg.type === "pong") { return; }
-
-      if (msg.type === "kicked") {
-        manualClose = true;
-        stopPing();
-        setError(msg.message || "Você foi removido.");
-        try { ws.close(); } catch {}
-        return;
-      }
-
-      if (msg.type === "joined") {
-        playerId = msg.player_id;
-        $("room").value = msg.room_id;
-        localStorage.setItem(roomKeyStorageKey(msg.room_id), msg.player_key);
-        location.hash = msg.room_id;
-        if (!isAuto) setHint(`Entrou na sala ${msg.room_id}.`);
-        return;
-      }
-
-      if (msg.type === "state") { renderState(msg.state); return; }
-      if (msg.type === "reveal") { showOverlay(msg.result, msg.game_over); return; }
-    };
-  }
-
-  function send(type, payload = {}) {
-    setError("");
-    if (!ws || ws.readyState !== 1) { setError("Você não está conectado (tentando reconectar...)."); scheduleReconnect(true); return; }
-    ws.send(JSON.stringify({ type, ...payload }));
-  }
-
-  $("create").onclick = async () => {
-    setError("");
-    const res = await fetch("/api/create-room");
-    const data = await res.json();
-    $("room").value = data.room_id;
-    location.hash = data.room_id;
-    setHint(`Sala criada: ${data.room_id}. Clique em Conectar.`);
-  };
-
-  $("connect").onclick = () => {
-    manualClose = false;
-    connect(false);
-  };
-
-  $("copyLink").onclick = async () => {
-    const room = currentRoom();
-    if (!room) return setError("Sem sala para copiar link.");
-    const url = `${location.origin}/#${room}`;
-    try { await navigator.clipboard.writeText(url); setHint("Link copiado!"); }
-    catch { setHint(url); }
-  };
-
-  $("start").onclick = () => send("start");
-  $("restart").onclick = () => send("restart");
-  $("skip").onclick = () => send("skip");
-
-  $("sendHand").onclick = () => {
-    const v = parseInt($("hand").value || "0", 10);
-    send("hand", { value: v });
-    $("handAck").textContent = "Mão enviada ✅";
-  };
-
-  $("sendGuess").onclick = () => {
-    const v = parseInt($("guess").value || "0", 10);
-    if (state && state.used_guesses && state.used_guesses.includes(v)) {
-      setError("Esse palpite já foi usado. Escolha outro.");
-      return;
-    }
-    send("guess", { value: v });
-    $("guessAck").textContent = "Palpite enviado ✅";
-  };
-
-  // quando voltar pra aba, tenta reconectar rápido se caiu
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") {
-      if (!ws || ws.readyState !== 1) scheduleReconnect(true);
-    }
-  });
-
-  // se fechar a aba, encerra sem ficar tentando reconectar
-  window.addEventListener("beforeunload", () => {
-    manualClose = true;
-    stopPing();
-    try { if (ws) ws.close(); } catch {}
-  });
-
-  window.addEventListener("load", () => {
-    const hash = (location.hash || "").replace("#", "").trim().toUpperCase();
-    if (hash) $("room").value = hash;
-  });
-</script>
-</body>
-</html>
+        $("waitingText").textContent = `Você já enviou sua mão. Aguardando... (V
