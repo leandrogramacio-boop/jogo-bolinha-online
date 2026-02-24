@@ -44,7 +44,7 @@
     .row{ display:flex; gap: 12px; flex-wrap: wrap; align-items: end; }
     label{ font-size: 12px; color: var(--muted); display:inline-block; margin-bottom: 6px; }
 
-    input, button{
+    input, button, textarea{
       padding: 10px 12px;
       font-size: 16px;
       border-radius: 12px;
@@ -54,6 +54,7 @@
       outline: none;
     }
     input{ min-width: 220px; }
+    textarea{ width: 100%; resize: vertical; }
 
     button{
       cursor: pointer;
@@ -156,9 +157,31 @@
     .barFill{ height: 100%; width: 0%; background: rgba(255,255,255,0.85); transition: width .35s ease; }
 
     .actionsBox p{ margin: 8px 0; color: var(--muted); }
+
+    /* ✅ botões rápidos (0/1/2/3) */
     .quick{ display:flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
     .quick button{ font-size: 13px; padding: 8px 10px; border-radius: 999px; }
 
+    /* botão kick */
+    .kickBtn{
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(239,68,68,0.25);
+      background: rgba(239,68,68,0.12);
+      color: rgba(255,255,255,0.92);
+    }
+    .kickBtn:hover{ border-color: rgba(239,68,68,0.35); background: rgba(239,68,68,0.18); }
+
+    .softBox{
+      margin-top: 10px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.10);
+      background: rgba(0,0,0,0.18);
+      padding: 10px 12px;
+    }
+
+    /* Overlay resultado */
     .overlay{
       position: fixed; inset: 0;
       background: rgba(0,0,0,0.55);
@@ -189,53 +212,44 @@
       font-size: 13px;
       display:flex; gap: 10px; align-items:center;
     }
-    .chart{ margin-top: 12px; display:grid; gap: 10px; }
-    .chartRow{ display:grid; grid-template-columns: 170px 1fr; gap: 10px; align-items:center; }
-    .chartName{ font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .bars{ display:grid; gap: 8px; }
-    .bar{
-      height: 14px; border-radius: 999px;
-      border: 1px solid rgba(255,255,255,0.10);
-      background: rgba(255,255,255,0.08);
-      overflow:hidden; position: relative;
-    }
-    .bar > .fill{ height: 100%; width: 0%; background: rgba(255,255,255,0.85); transition: width .45s ease; }
-    .bar.hand > .fill{ background: rgba(59,130,246,0.85); }
-    .bar.guess > .fill{ background: rgba(245,158,11,0.90); }
-
-    /* Tabs painel */
-    .tabs{ display:flex; gap: 10px; flex-wrap: wrap; align-items:center; margin-top: 6px; }
-    .tabBtn{
-      padding: 8px 10px;
-      border-radius: 999px;
-      font-size: 13px;
+    .ovTimerWrap{ margin-top: 10px; display: grid; gap: 6px; }
+    .ovTimerBar{
+      height: 10px; border-radius: 999px;
       border: 1px solid rgba(255,255,255,0.12);
-      background: rgba(255,255,255,0.07);
-      color: rgba(255,255,255,0.86);
+      background: rgba(255,255,255,0.08);
+      overflow: hidden;
+      box-shadow: inset 0 6px 16px rgba(0,0,0,0.20);
     }
-    .tabBtn.active{
-      background: rgba(255,255,255,0.12);
-      border-color: rgba(255,255,255,0.20);
+    .ovTimerFill{
+      height: 100%;
+      width: 100%;
+      background: rgba(255,255,255,0.85);
+      transition: width .05s linear;
     }
+    .ovTimerText{ color: var(--muted); font-size: 13px; }
 
-    /* Palpites sempre visíveis (fixo dentro do card Ações) */
-    .guessesAlways{
-      margin-top: 10px;
-      padding: 10px 12px;
+    .chatLog{
+      height: 240px;
+      overflow: auto;
       border-radius: 14px;
       border: 1px solid rgba(255,255,255,0.10);
       background: rgba(0,0,0,0.18);
+      padding: 10px;
+      display: grid;
+      gap: 10px;
     }
-    .guessesAlwaysTitle{
-      display:flex; gap: 10px; flex-wrap: wrap; align-items:center; justify-content: space-between;
-      margin-bottom: 6px;
+    .chatMsg{
+      border: 1px solid rgba(255,255,255,0.10);
+      background: rgba(255,255,255,0.05);
+      border-radius: 14px;
+      padding: 10px 12px;
     }
-    .guessesAlwaysTitle b{ color: rgba(255,255,255,0.92); }
-    .guessesAlwaysText{ color: rgba(255,255,255,0.80); font-size: 13px; line-height: 1.35; }
+    .chatMsg .who{ color: rgba(255,255,255,0.92); font-weight: 750; font-size: 13px; }
+    .chatMsg .when{ color: var(--muted); font-size: 12px; margin-left: 8px; }
+    .chatMsg .txt{ margin-top: 6px; color: rgba(255,255,255,0.88); white-space: pre-wrap; }
 
     @media (max-width: 680px){
       input{ min-width: 160px; width: 100%; }
-      .chartRow{ grid-template-columns: 1fr; }
       .barWrap{ width: 140px; }
     }
   </style>
@@ -248,6 +262,7 @@
       Chat + mão pessoal + pause + prêmio ✅
     </p>
 
+    <!-- CONTROLES / STATUS -->
     <div class="card">
       <div class="row">
         <div>
@@ -283,27 +298,27 @@
 
       <div class="orderBar" id="orderBar"></div>
 
-      <!-- ✅ 1) Prêmio em cima (conforme imagem) -->
+      <!-- ✅ PRÊMIO EM CIMA -->
       <div class="row" style="align-items:end; margin-top: 10px;">
-        <div style="flex: 1; min-width: 260px;">
-          <label><b>Prêmio</b> / Perdedor paga: <span class="subtitle" style="margin:0;">(host define, todo mundo vê)</span></label><br/>
-          <input id="penaltyInput" placeholder="Ex.: refri / pizza / pix 10" />
+        <div style="flex:1; min-width: 260px;">
+          <label><b>Prêmio / Perdedor paga:</b> (host define, todo mundo vê)</label><br/>
+          <input id="premioInput" placeholder="Ex: Pizza / Refri / 10 reais / ..." />
         </div>
-        <button id="penaltySet" disabled>Definir (host)</button>
+        <button id="setPremio" disabled>Definir (host)</button>
       </div>
 
       <p id="err" class="error"></p>
       <p id="hint" class="hint"></p>
     </div>
 
+    <!-- AÇÕES -->
     <div class="card actionsBox">
       <h3 style="margin:0 0 8px;">Ações</h3>
 
-      <!-- ✅ 3) Jogador da vez dentro de Ações -->
-      <div class="pills" style="margin-bottom:10px;">
+      <div class="pills" style="margin-bottom: 10px;">
         <span class="pill" id="myHandPill">minha mão: -</span>
-        <span class="pill" id="penaltyPill">prêmio: -</span>
-        <span class="pill" id="turnActionPill">jogador da vez: -</span>
+        <span class="pill" id="premioPill">prêmio: -</span>
+        <span class="pill" id="turnNowPill">jogador da vez: -</span>
       </div>
 
       <div id="handBox" style="display:none;">
@@ -313,6 +328,7 @@
           <button id="sendHand">Enviar mão</button>
           <span id="handAck" style="color: var(--good); font-weight: 650;"></span>
         </div>
+        <!-- ✅ BOTÕES 0/1/2/3 (voltaram) -->
         <div class="quick" id="handQuick"></div>
       </div>
 
@@ -323,47 +339,74 @@
           <button id="sendGuess">Enviar palpite</button>
           <span id="guessAck" style="color: var(--good); font-weight: 650;"></span>
         </div>
-      </div>
-
-      <!-- ✅ 2) Palpites sempre visíveis -->
-      <div class="guessesAlways">
-        <div class="guessesAlwaysTitle">
-          <b>Palpites rolando</b>
-          <span class="subtitle" style="margin:0;">(atualiza em tempo real)</span>
-        </div>
-        <div class="guessesAlwaysText" id="guessesAlwaysText">-</div>
+        <p class="subtitle" style="margin-top:10px;">
+          Palpites já dados: <span id="usedGuesses">-</span>
+        </p>
       </div>
 
       <div id="waitingBox" style="display:none;">
         <p class="subtitle" id="waitingText">Aguardando...</p>
       </div>
+
+      <!-- ✅ Palpites sempre visíveis -->
+      <div class="softBox">
+        <div style="display:flex; gap: 12px; align-items:center; justify-content: space-between; flex-wrap: wrap;">
+          <b>Palpites rolando</b>
+          <span class="subtitle" style="margin:0;">(atualiza em tempo real)</span>
+        </div>
+        <div class="subtitle" id="rollingGuesses" style="margin-top: 8px;">—</div>
+      </div>
     </div>
 
+    <!-- JOGADORES -->
     <div class="card">
       <h3 style="margin:0 0 8px;">Jogadores</h3>
       <div id="players" class="playersGrid"></div>
     </div>
 
-    <!-- Painel da Partida (fica embaixo dos jogadores como você pediu) -->
+    <!-- ✅ PAINEL DA PARTIDA (NO FINAL, DEPOIS DE JOGADORES) -->
     <div class="card">
       <h3 style="margin:0 0 8px;">Painel da Partida</h3>
       <p class="subtitle" style="margin:0 0 12px;">
-        Timeline e resumo por rodada (enquanto a página estiver aberta).
+        Histórico das rodadas + gráfico do total de bolinhas (enquanto a página estiver aberta).
       </p>
-      <div id="timelineMode">
-        <div class="subtitle" id="timelineInfo" style="margin:0;">Sem rodadas ainda.</div>
+
+      <div class="row" style="align-items:center;">
+        <span class="pill" id="panelPhase">fase: -</span>
+        <span class="pill" id="panelRound">rodada: -</span>
+        <span class="pill" id="panelTurn">vez: -</span>
+        <button id="clearHistory">Limpar histórico</button>
       </div>
+
+      <div style="margin-top:12px;">
+        <canvas id="roundChart" width="980" height="220" style="
+          width: 100%;
+          max-width: 100%;
+          background: rgba(255,255,255,0.04);
+          border: 1px solid rgba(255,255,255,0.10);
+          border-radius: 14px;
+        "></canvas>
+      </div>
+
+      <div class="sep"></div>
+      <div id="roundHistory" style="display:grid; gap:10px;"></div>
     </div>
 
-    <!-- Chat embaixo do Painel -->
+    <!-- ✅ CHAT (logo abaixo do painel) -->
     <div class="card">
-      <h3 style="margin:0 0 8px;">Chat</h3>
-      <div id="chatList" style="display:grid; gap:8px; margin-bottom:10px;"></div>
-      <div class="row">
-        <input id="chatInput" placeholder="Digite uma mensagem..." />
-        <button id="chatSend">Enviar</button>
+      <h3 style="margin:0 0 8px;">Chat da Sala</h3>
+      <p class="subtitle" style="margin:0 0 12px;">Conversa em tempo real com a galera da sala.</p>
+
+      <div class="chatLog" id="chatLog"></div>
+
+      <div class="row" style="align-items:end; margin-top: 10px;">
+        <div style="flex:1; min-width: 260px;">
+          <label>Mensagem</label><br/>
+          <input id="chatInput" placeholder="Digite e aperte Enter..." />
+        </div>
+        <button id="sendChat">Enviar</button>
       </div>
-      <p class="subtitle" style="margin-top:10px;">Dica: o chat fica salvo no estado da sala (últimas 50 mensagens).</p>
+      <p class="hint" id="chatHint" style="margin-top:8px;"></p>
     </div>
   </div>
 
@@ -385,8 +428,10 @@
         </div>
       </div>
 
-      <div class="sep"></div>
-      <div class="chart" id="ovChart"></div>
+      <div class="ovTimerWrap">
+        <div class="ovTimerBar"><div class="ovTimerFill" id="ovTimerFill"></div></div>
+        <div class="ovTimerText" id="ovTimerText">Fechando em...</div>
+      </div>
     </div>
   </div>
 
@@ -395,14 +440,202 @@
 
   let ws = null;
   let playerId = null;
-  let playerKey = null;
   let state = null;
+
+  // keepalive
+  let pingTimer = null;
+
+  // reconexão
+  let reconnectTimer = null;
+  let reconnectAttempts = 0;
+  let manualClose = false;
 
   // overlay timer
   const OVERLAY_MS = 6500;
   const OVERLAY_GAMEOVER_MS = 10000;
-  let overlayTimer = null;
+  let overlayTimeout = null;
+  let overlayInterval = null;
 
+  // =====================
+  // Painel da Partida
+  // =====================
+  const matchHistory = []; // [{ round_num, total, winner, hands, guesses, game_over }]
+  const MAX_HISTORY = 50;
+
+  function setPanelMeta(s){
+    $("panelPhase").textContent = `fase: ${s.phase ?? "-"}`;
+    $("panelRound").textContent = `rodada: ${s.round_num ?? "-"}`;
+    $("panelTurn").textContent = s.turn_player_name ? `vez: ${s.turn_player_name}` : "vez: -";
+  }
+
+  function pushRevealToHistory(revealMsg){
+    if (!revealMsg || !revealMsg.result) return;
+
+    const r = revealMsg.result;
+    matchHistory.push({
+      round_num: r.round_num,
+      total: r.total,
+      winner: r.winner || null,
+      hands: r.hands || {},
+      guesses: r.guesses || {},
+      game_over: revealMsg.game_over || null
+    });
+
+    while (matchHistory.length > MAX_HISTORY) matchHistory.shift();
+
+    renderHistory();
+    drawRoundChart();
+  }
+
+  function renderHistory(){
+    const box = $("roundHistory");
+    box.innerHTML = "";
+
+    if (!matchHistory.length){
+      box.innerHTML = `<p class="subtitle" style="margin:0;">Sem rodadas ainda.</p>`;
+      return;
+    }
+
+    const reversed = [...matchHistory].reverse();
+
+    for (const item of reversed){
+      const card = document.createElement("div");
+      card.style.cssText = `
+        border: 1px solid rgba(255,255,255,0.10);
+        background: rgba(255,255,255,0.05);
+        border-radius: 14px;
+        padding: 12px;
+      `;
+
+      const winnerLine = item.winner
+        ? `🏆 <b>${item.winner}</b> acertou e perdeu 1 bolinha.`
+        : `Ninguém acertou nesta rodada.`;
+
+      const go = item.game_over
+        ? `<div style="margin-top:8px; color: rgba(255,255,255,0.90);">
+             🧨 <b>Fim de jogo</b> — Perdedor: <b>${item.game_over.loser ?? "?"}</b>
+           </div>`
+        : "";
+
+      const handsTxt = Object.entries(item.hands).map(([n,v]) => `${n}: ${v}`).join(" • ") || "-";
+      const guessesTxt = Object.entries(item.guesses).map(([n,v]) => `${n}: ${v}`).join(" • ") || "-";
+
+      card.innerHTML = `
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+          <span class="pill">Rodada <b>${item.round_num}</b></span>
+          <span class="pill">Total: <b>${item.total}</b></span>
+          <span class="pill">${winnerLine}</span>
+        </div>
+        <div class="subtitle" style="margin-top:10px;">
+          <b>Mãos:</b> ${handsTxt}
+        </div>
+        <div class="subtitle" style="margin-top:6px;">
+          <b>Palpites:</b> ${guessesTxt}
+        </div>
+        ${go}
+      `;
+
+      box.appendChild(card);
+    }
+  }
+
+  function drawRoundChart(){
+    const c = $("roundChart");
+    const ctx = c.getContext("2d");
+
+    const W = c.width;
+    const H = c.height;
+
+    ctx.clearRect(0,0,W,H);
+
+    ctx.fillStyle = "rgba(255,255,255,0.02)";
+    ctx.fillRect(0,0,W,H);
+
+    if (!matchHistory.length){
+      ctx.fillStyle = "rgba(255,255,255,0.65)";
+      ctx.font = "16px system-ui";
+      ctx.fillText("Sem dados ainda (aguardando rodadas)...", 18, 40);
+      return;
+    }
+
+    const data = matchHistory.slice(-12); // últimas 12
+    const maxVal = Math.max(...data.map(x => x.total), 1);
+
+    const pad = 22;
+    const chartW = W - pad*2;
+    const chartH = H - pad*2 - 18;
+
+    ctx.strokeStyle = "rgba(255,255,255,0.15)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(pad, pad);
+    ctx.lineTo(pad, pad + chartH);
+    ctx.lineTo(pad + chartW, pad + chartH);
+    ctx.stroke();
+
+    const n = data.length;
+    const gap = 10;
+    const barW = Math.max(18, Math.floor((chartW - gap*(n-1)) / n));
+
+    for (let i=0; i<n; i++){
+      const item = data[i];
+      const frac = item.total / maxVal;
+      const bh = Math.floor(chartH * frac);
+      const x = pad + i*(barW + gap);
+      const y = pad + chartH - bh;
+
+      ctx.fillStyle = "rgba(255,255,255,0.82)";
+      ctx.fillRect(x, y, barW, bh);
+
+      ctx.fillStyle = "rgba(255,255,255,0.65)";
+      ctx.font = "12px system-ui";
+      ctx.fillText(String(item.round_num), x + 4, pad + chartH + 14);
+
+      ctx.fillStyle = "rgba(255,255,255,0.85)";
+      ctx.fillText(String(item.total), x + 4, y - 6);
+    }
+
+    ctx.fillStyle = "rgba(255,255,255,0.85)";
+    ctx.font = "14px system-ui";
+    ctx.fillText("Total de bolinhas por rodada (últimas 12)", pad, 18);
+  }
+
+  $("clearHistory").onclick = () => {
+    matchHistory.length = 0;
+    renderHistory();
+    drawRoundChart();
+  };
+
+  // =====================
+  // Chat
+  // =====================
+  function addChatLine({ name, text, ts }){
+    const log = $("chatLog");
+    const d = document.createElement("div");
+    d.className = "chatMsg";
+
+    const when = ts ? new Date(ts).toLocaleTimeString() : new Date().toLocaleTimeString();
+    d.innerHTML = `
+      <div><span class="who">${escapeHtml(name || "alguém")}</span><span class="when">${escapeHtml(when)}</span></div>
+      <div class="txt">${escapeHtml(text || "")}</div>
+    `;
+
+    log.appendChild(d);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function escapeHtml(s){
+    return String(s)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function setChatHint(msg=""){ $("chatHint").textContent = msg; }
+
+  // ===== util =====
   function setError(msg = "") { $("err").textContent = msg; }
   function setHint(msg = "") { $("hint").textContent = msg; }
 
@@ -412,11 +645,13 @@
     $("connStatus").textContent = ok ? "Conectado" : "Desconectado";
     $("connDot").className = `dot ${ok ? "on" : "off"}`;
   }
+
   function showBoxes({ hand=false, guess=false, waiting=false } = {}) {
     $("handBox").style.display = hand ? "block" : "none";
     $("guessBox").style.display = guess ? "block" : "none";
     $("waitingBox").style.display = waiting ? "block" : "none";
   }
+
   function you() {
     if (!state || !playerId) return null;
     return state.players.find(p => p.player_id === playerId) || null;
@@ -424,17 +659,63 @@
   function isHost() { return state && playerId && state.host_player_id === playerId; }
   function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
 
-  function ballsHTML(ballsLeft, maxBalls = 3) {
-    const wrap = document.createElement("span");
-    wrap.className = "balls";
-    for (let i = 0; i < maxBalls; i++) {
-      const b = document.createElement("span");
-      b.className = "ball" + (i < ballsLeft ? " filled" : "");
-      wrap.appendChild(b);
+  // ===== overlay timer =====
+  function stopOverlayTimers(){
+    if (overlayTimeout) clearTimeout(overlayTimeout);
+    if (overlayInterval) clearInterval(overlayInterval);
+    overlayTimeout = null;
+    overlayInterval = null;
+  }
+  function startOverlayTimer(durationMs){
+    stopOverlayTimers();
+
+    const start = Date.now();
+    const end = start + durationMs;
+
+    function tick(){
+      const now = Date.now();
+      const remain = Math.max(0, end - now);
+      const frac = remain / durationMs;
+
+      $("ovTimerFill").style.width = `${(frac * 100).toFixed(1)}%`;
+      $("ovTimerText").textContent = `Fechando em ${Math.ceil(remain/1000)}s`;
+
+      if (remain <= 0) {
+        $("overlay").classList.remove("show");
+        stopOverlayTimers();
+      }
     }
-    return wrap;
+
+    tick();
+    overlayInterval = setInterval(tick, 50);
+    overlayTimeout = setTimeout(() => {
+      $("overlay").classList.remove("show");
+      stopOverlayTimers();
+    }, durationMs);
   }
 
+  function showOverlay(result, gameOver) {
+    $("overlay").classList.add("show");
+    $("ovTitle").textContent = `Revelação — Rodada ${result.round_num}`;
+    $("ovMeta").textContent = gameOver
+      ? `Fim de jogo! Perdedor: ${gameOver.loser ?? "Empate raro"}`
+      : "Resultado da rodada.";
+    $("ovTotal").textContent = String(result.total);
+
+    if (result.winner) {
+      $("ovWinner").style.display = "flex";
+      $("ovWinnerText").textContent = `${result.winner} acertou e perde 1 bolinha`;
+    } else {
+      $("ovWinner").style.display = "none";
+      $("ovWinnerText").textContent = "";
+    }
+    startOverlayTimer(gameOver ? OVERLAY_GAMEOVER_MS : OVERLAY_MS);
+  }
+
+  $("closeOverlay").onclick = () => { $("overlay").classList.remove("show"); stopOverlayTimers(); };
+  $("overlay").onclick = (e) => { if (e.target === $("overlay")) { $("overlay").classList.remove("show"); stopOverlayTimers(); } };
+
+  // ===== UI =====
   function renderOrderBar(s) {
     const bar = $("orderBar");
     bar.innerHTML = "";
@@ -453,6 +734,17 @@
       chip.innerHTML = `<span class="miniDot"></span><span>${idx+1}. ${pl.name}</span>`;
       bar.appendChild(chip);
     });
+  }
+
+  function ballsHTML(ballsLeft, maxBalls = 3) {
+    const wrap = document.createElement("span");
+    wrap.className = "balls";
+    for (let i = 0; i < maxBalls; i++) {
+      const b = document.createElement("span");
+      b.className = "ball" + (i < ballsLeft ? " filled" : "");
+      wrap.appendChild(b);
+    }
+    return wrap;
   }
 
   function renderPlayers(s) {
@@ -500,18 +792,60 @@
       barWrap.appendChild(barFill);
       rb.appendChild(barWrap);
 
+      if (isHost() && p.player_id !== playerId) {
+        const kick = document.createElement("button");
+        kick.className = "kickBtn";
+        kick.textContent = "Expulsar";
+        kick.onclick = () => {
+          const ok = confirm(`Remover "${p.name}" da sala?`);
+          if (ok) send("kick", { target_id: p.player_id });
+        };
+        rb.appendChild(kick);
+      }
+
       list.appendChild(row);
     });
   }
 
-  function renderGuessesAlways(s){
-    // ✅ sempre visível
-    const gp = s.guesses_public || [];
-    if (gp.length){
-      $("guessesAlwaysText").textContent = gp.map(x => `${x.name}: ${x.guess}`).join("  •  ");
-    } else {
-      $("guessesAlwaysText").textContent = "— (ninguém enviou palpite ainda)";
+  // ✅ BOTÕES 0/1/2/3
+  function renderHandQuick(maxHand) {
+    const q = $("handQuick");
+    q.innerHTML = "";
+    for (let v = 0; v <= 3; v++) {
+      const b = document.createElement("button");
+      b.textContent = `${v}`;
+      b.disabled = v > maxHand;
+      b.onclick = () => { $("hand").value = String(v); };
+      q.appendChild(b);
     }
+  }
+
+  function renderGuessesPublic(s) {
+    // Mantém usado_guesses e também uma versão sempre visível em "Palpites rolando"
+    const used = (s.used_guesses || []).join(", ") || "-";
+    $("usedGuesses").textContent = used;
+
+    const gp = s.guesses_public || [];
+    if (gp.length) {
+      const txt = gp.map(x => `${x.name}: ${x.guess}`).join("  •  ");
+      $("rollingGuesses").textContent = txt;
+      if (s.phase === "guesses") $("usedGuesses").textContent = txt;
+    } else {
+      $("rollingGuesses").textContent = "— (ninguém enviou palpite ainda)";
+    }
+  }
+
+  function updatePremioUI(s){
+    const premio = (s.premio ?? s.prenda ?? s.penalty ?? "").trim?.() || (s.premio || s.prenda || s.penalty || "");
+    const text = premio ? String(premio) : "-";
+    $("premioPill").textContent = `prêmio: ${text}`;
+    $("premioInput").value = premio ? String(premio) : $("premioInput").value;
+  }
+
+  function updatePauseUI(s){
+    const paused = !!(s.paused ?? s.pause ?? s.is_paused);
+    $("pausePill").textContent = `pause: ${paused ? "SIM" : "NÃO"}`;
+    $("pauseBtn").textContent = paused ? "Retomar (host)" : "Pausar (host)";
   }
 
   function renderState(s) {
@@ -521,53 +855,37 @@
     $("roundPill").textContent = `rodada: ${s.round_num || "-"}`;
     $("roomPill").textContent = `sala: ${s.room_id || "-"}`;
     $("turnPill").textContent = s.turn_player_name ? `vez: ${s.turn_player_name}` : "vez: -";
-    $("pausePill").textContent = `pause: ${s.paused ? "SIM" : "NÃO"}`;
 
-    // ✅ botões host
+    // ✅ painel meta
+    setPanelMeta(s);
+
+    // ✅ Ações: jogador da vez sempre visível
+    $("turnNowPill").textContent = `jogador da vez: ${s.turn_player_name || "-"}`;
+
+    // ✅ prêmio + pause
+    updatePremioUI(s);
+    updatePauseUI(s);
+
     $("start").disabled = !(s.phase === "lobby" && isHost());
     $("restart").disabled = !isHost();
     $("skip").disabled = !(isHost() && (s.phase === "hands" || s.phase === "guesses"));
     $("pauseBtn").disabled = !isHost();
-    $("pauseBtn").textContent = s.paused ? "Retomar (host)" : "Pausar (host)";
-
-    // ✅ prêmio
-    $("penaltySet").disabled = !isHost();
-    $("penaltyPill").textContent = `prêmio: ${s.penalty_text ? s.penalty_text : "-"}`;
-    if (!isHost()){
-      // host edita, outros só veem (mantém input mas não obriga)
-      $("penaltyInput").disabled = true;
-    } else {
-      $("penaltyInput").disabled = false;
-      if (typeof s.penalty_text === "string") $("penaltyInput").value = s.penalty_text;
-    }
-
-    // ✅ 3) jogador da vez em Ações
-    $("turnActionPill").textContent = s.turn_player_name ? `jogador da vez: ${s.turn_player_name}` : "jogador da vez: -";
+    $("setPremio").disabled = !isHost();
 
     $("maxGuess").textContent = (s.max_guess ?? "-");
 
-    // ✅ 2) palpites sempre rolando
-    renderGuessesAlways(s);
-
+    renderGuessesPublic(s);
     renderOrderBar(s);
     renderPlayers(s);
-
-    // chat render
-    renderChat(s.chat || []);
 
     const me = you();
     $("handAck").textContent = "";
     $("guessAck").textContent = "";
 
-    // minha mão pessoal (mostra o que eu mandei)
-    // Se ainda não mandou, mostra "-"
-    // (a confirmação “minha mão: X” vem pelo estado, usando flag hand_submitted)
-    if (me && me.hand_submitted) {
-      // não temos o valor no state por padrão; exibimos "enviada ✅"
-      $("myHandPill").textContent = `minha mão: enviada ✅`;
-    } else {
-      $("myHandPill").textContent = `minha mão: -`;
-    }
+    // ✅ minha mão (se o servidor mandar algo tipo my_hand / last_hand, aparece; senão fica "-" até enviar)
+    const mh = (s.my_hand_value ?? s.my_hand ?? (me && me.last_hand) ?? null);
+    if (mh === 0 || mh) $("myHandPill").textContent = `minha mão: ${mh}`;
+    else $("myHandPill").textContent = `minha mão: -`;
 
     if (!me) {
       showBoxes({ waiting: true });
@@ -603,6 +921,7 @@
       const maxHand = Math.min(3, me.balls_left);
       $("hand").max = String(maxHand);
       $("hand").value = "0";
+      renderHandQuick(maxHand); // ✅ garante os botões 0/1/2/3
       showBoxes({ hand: true });
       return;
     }
@@ -631,108 +950,11 @@
       : "Revelando resultado...";
   }
 
-  function showOverlay(result, gameOver) {
-    $("overlay").classList.add("show");
-
-    $("ovTitle").textContent = `Revelação — Rodada ${result.round_num}`;
-    $("ovMeta").textContent = gameOver
-      ? `Fim de jogo! Perdedor: ${gameOver.loser ?? "Empate raro"}`
-      : "Resumo visual da rodada (mãos e palpites).";
-
-    $("ovTotal").textContent = String(result.total);
-
-    if (result.winner) {
-      $("ovWinner").style.display = "flex";
-      $("ovWinnerText").textContent = `${result.winner} acertou e perde 1 bolinha`;
-    } else {
-      $("ovWinner").style.display = "none";
-      $("ovWinnerText").textContent = "";
-    }
-
-    const chart = $("ovChart");
-    chart.innerHTML = "";
-
-    let maxVal = result.total;
-    for (const v of Object.values(result.hands)) maxVal = Math.max(maxVal, v);
-    for (const v of Object.values(result.guesses)) maxVal = Math.max(maxVal, v);
-    maxVal = Math.max(1, maxVal);
-
-    const names = Object.keys(result.hands);
-
-    names.forEach((name) => {
-      const hand = result.hands[name] ?? 0;
-      const guess = result.guesses[name] ?? 0;
-
-      const row = document.createElement("div");
-      row.className = "chartRow";
-
-      const nm = document.createElement("div");
-      nm.className = "chartName";
-      nm.textContent = name + (name === result.winner ? " 🏆" : "");
-      row.appendChild(nm);
-
-      const bars = document.createElement("div");
-      bars.className = "bars";
-
-      const handBar = document.createElement("div");
-      handBar.className = "bar hand";
-      handBar.innerHTML = `<div class="fill"></div>`;
-      bars.appendChild(handBar);
-
-      const guessBar = document.createElement("div");
-      guessBar.className = "bar guess";
-      guessBar.innerHTML = `<div class="fill"></div>`;
-      bars.appendChild(guessBar);
-
-      row.appendChild(bars);
-      chart.appendChild(row);
-
-      requestAnimationFrame(() => {
-        handBar.querySelector(".fill").style.width = `${(hand / maxVal) * 100}%`;
-        guessBar.querySelector(".fill").style.width = `${(guess / maxVal) * 100}%`;
-      });
-    });
-
-    if (overlayTimer) {
-      clearTimeout(overlayTimer);
-      overlayTimer = null;
-    }
-    const ms = gameOver ? OVERLAY_GAMEOVER_MS : OVERLAY_MS;
-    overlayTimer = setTimeout(() => {
-      $("overlay").classList.remove("show");
-      overlayTimer = null;
-    }, ms);
-  }
-
-  $("closeOverlay").onclick = () => $("overlay").classList.remove("show");
-  $("overlay").onclick = (e) => { if (e.target === $("overlay")) $("overlay").classList.remove("show"); };
-
-  // Chat
-  function renderChat(list){
-    const box = $("chatList");
-    box.innerHTML = "";
-    if (!list || !list.length){
-      box.innerHTML = `<div class="subtitle">Sem mensagens ainda.</div>`;
-      return;
-    }
-    for (const m of list.slice(-50)){
-      const div = document.createElement("div");
-      div.style.cssText = `
-        border: 1px solid rgba(255,255,255,0.10);
-        background: rgba(255,255,255,0.05);
-        border-radius: 12px;
-        padding: 10px;
-      `;
-      div.innerHTML = `<b>${m.name}:</b> <span style="color: rgba(255,255,255,0.86)">${m.text}</span>`;
-      box.appendChild(div);
-    }
-    box.scrollTop = box.scrollHeight;
-  }
-
-  // WS
+  // WebSocket
   function connect() {
     setError("");
     setHint("");
+    setChatHint("");
 
     const name = ($("name").value || "Jogador").trim();
     const room = currentRoom();
@@ -745,19 +967,33 @@
     const url = `${proto}://${location.host}/ws/${room}?name=${encodeURIComponent(name)}${keyParam}`;
     ws = new WebSocket(url);
 
-    ws.onopen = () => { setConnected(true); setHint(`Conectado na sala ${room}.`); };
-    ws.onclose = () => { setConnected(false); setHint("Desconectado. Clique em Conectar de novo."); };
+    ws.onopen = () => {
+      setConnected(true);
+      setHint(`Conectado na sala ${room}.`);
+      // keepalive
+      if (pingTimer) clearInterval(pingTimer);
+      pingTimer = setInterval(() => {
+        try { send("ping"); } catch {}
+      }, 20000);
+    };
+
+    ws.onclose = () => {
+      setConnected(false);
+      setHint("Desconectado. Clique em Conectar de novo.");
+      if (pingTimer) { clearInterval(pingTimer); pingTimer = null; }
+    };
+
     ws.onerror = () => setError("Erro no WebSocket.");
 
     ws.onmessage = (ev) => {
       const msg = JSON.parse(ev.data);
+
       if (msg.type === "error") { setError(msg.message); return; }
 
       if (msg.type === "joined") {
         playerId = msg.player_id;
-        playerKey = msg.player_key;
         $("room").value = msg.room_id;
-        localStorage.setItem(roomKeyStorageKey(msg.room_id), playerKey);
+        if (msg.player_key) localStorage.setItem(roomKeyStorageKey(msg.room_id), msg.player_key);
         location.hash = msg.room_id;
         setHint(`Entrou na sala ${msg.room_id}.`);
         return;
@@ -767,7 +1003,27 @@
 
       if (msg.type === "reveal") {
         showOverlay(msg.result, msg.game_over);
-        $("timelineInfo").textContent = `Última revelação: rodada ${msg.result.round_num} (total ${msg.result.total}).`;
+        pushRevealToHistory(msg); // ✅ painel
+        return;
+      }
+
+      // ✅ CHAT (se o backend mandar "chat")
+      if (msg.type === "chat") {
+        addChatLine({ name: msg.name, text: msg.text, ts: msg.ts });
+        return;
+      }
+
+      // ✅ PRÊMIO (se o backend mandar evento separado)
+      if (msg.type === "premio") {
+        $("premioPill").textContent = `prêmio: ${msg.value || "-"}`;
+        return;
+      }
+
+      // ✅ PAUSE (se o backend mandar evento separado)
+      if (msg.type === "pause") {
+        $("pausePill").textContent = `pause: ${(msg.paused ? "SIM" : "NÃO")}`;
+        $("pauseBtn").textContent = msg.paused ? "Retomar (host)" : "Pausar (host)";
+        return;
       }
     };
   }
@@ -802,22 +1058,21 @@
   $("restart").onclick = () => send("restart");
   $("skip").onclick = () => send("skip");
 
-  $("pauseBtn").onclick = () => {
-    if (!state) return;
-    send(state.paused ? "resume" : "pause");
-  };
+  $("pauseBtn").onclick = () => send("pause");
 
-  $("penaltySet").onclick = () => {
-    const v = ($("penaltyInput").value || "").trim();
-    send("set_penalty", { value: v });
-    setHint("Prêmio atualizado ✅");
+  $("setPremio").onclick = () => {
+    const v = ($("premioInput").value || "").trim();
+    if (!v) { setError("Digite um prêmio antes de definir."); return; }
+    send("premio", { value: v });
+    $("premioPill").textContent = `prêmio: ${v}`;
+    setHint("Prêmio definido ✅");
   };
 
   $("sendHand").onclick = () => {
     const v = parseInt($("hand").value || "0", 10);
     send("hand", { value: v });
     $("handAck").textContent = "Mão enviada ✅";
-    $("myHandPill").textContent = `minha mão: ${v}`; // ✅ mostra a quantidade enviada (sem depender do server)
+    $("myHandPill").textContent = `minha mão: ${v}`; // ✅ cada um vê a sua
   };
 
   $("sendGuess").onclick = () => {
@@ -830,28 +1085,26 @@
     $("guessAck").textContent = "Palpite enviado ✅";
   };
 
-  $("chatSend").onclick = () => {
+  function sendChat(){
     const txt = ($("chatInput").value || "").trim();
     if (!txt) return;
+    // tenta enviar pro servidor; se o backend ainda não suporta, pelo menos não quebra
     send("chat", { text: txt });
     $("chatInput").value = "";
-  };
+    setChatHint("");
+  }
 
-  window.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && document.activeElement === $("chatInput")) {
-      $("chatSend").click();
-    }
+  $("sendChat").onclick = () => sendChat();
+  $("chatInput").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); sendChat(); }
   });
 
   window.addEventListener("load", () => {
     const hash = (location.hash || "").replace("#", "").trim().toUpperCase();
     if (hash) $("room").value = hash;
+    renderHistory();
+    drawRoundChart();
   });
-
-  // keepalive
-  setInterval(() => {
-    if (ws && ws.readyState === 1) send("ping");
-  }, 20000);
 </script>
 </body>
 </html>
