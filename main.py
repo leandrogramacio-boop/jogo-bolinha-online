@@ -1,794 +1,660 @@
-<!doctype html>
-<html lang="pt-br">
-<head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>🎱 Jogo das Bolinhas (Online)</title>
+from __future__ import annotations
 
-  <style>
-    :root{
-      --bg: #0b0c10;
-      --card: rgba(255,255,255,0.06);
-      --border: rgba(255,255,255,0.10);
-      --text: rgba(255,255,255,0.92);
-      --muted: rgba(255,255,255,0.65);
-      --good: #22c55e;
-      --warn: #f59e0b;
-      --bad: #ef4444;
-      --shadow: 0 10px 30px rgba(0,0,0,0.35);
+import asyncio
+import json
+import secrets
+import time
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Dict, List, Optional, Set
+
+from fastapi import FastAPI, Query, WebSocket, WebSocketDisconnect
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+
+
+# =========================
+# CONFIG
+# =========================
+BASE_DIR = Path(__file__).resolve().parent
+STATIC_DIR = BASE_DIR / "static"
+
+MAX_PLAYERS_PER_ROOM = 10
+STARTING_BALLS = 3
+
+DISCONNECTED_PURGE_SECONDS = 15 * 60
+ROOM_IDLE_PURGE_SECONDS = 12 * 60 * 60
+CLEANUP_EVERY_SECONDS = 5 * 60
+
+
+# =========================
+# HELPERS
+# =========================
+def now_ts() -> float:
+    return time.time()
+
+
+def gen_room_id() -> str:
+    alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+    return "".join(secrets.choice(alphabet) for _ in range(6))
+
+
+def gen_player_id() -> str:
+    return secrets.token_urlsafe(8).replace("-", "").replace("_", "")[:10]
+
+
+def gen_player_key() -> str:
+    return secrets.token_urlsafe(18)
+
+
+async def safe_send(ws: WebSocket, payload: dict) -> None:
+    await ws.send_text(json.dumps(payload, ensure_ascii=False))
+
+
+# =========================
+# MODELOS
+# =========================
+@dataclass
+class Player:
+    player_id: str
+    key: str
+    name: str
+    balls_left: int = STARTING_BALLS
+    ws: Optional[WebSocket] = None
+    connected: bool = False
+    disconnected_at: Optional[float] = None
+
+    hand_submitted: bool = False
+    guess_submitted: bool = False
+
+    @property
+    def alive(self) -> bool:
+        return self.balls_left > 0
+
+
+@dataclass
+class Room:
+    room_id: str
+    created_at: float = field(default_factory=now_ts)
+    updated_at: float = field(default_factory=now_ts)
+
+    host_player_id: Optional[str] = None
+
+    phase: str = "lobby"  # lobby -> hands -> guesses -> reveal -> over
+    round_num: int = 0
+
+    players: Dict[str, Player] = field(default_factory=dict)
+
+    # ordem fixa (entrada)
+    base_order: List[str] = field(default_factory=list)
+
+    # ordem desta rodada (rotacionada)
+    starter_pid: Optional[str] = None
+    round_order: List[str] = field(default_factory=list)
+
+    # controle de "vez"
+    turn_player_id: Optional[str] = None
+
+    # dados da rodada
+    hands: Dict[str, int] = field(default_factory=dict)
+    guesses: Dict[str, int] = field(default_factory=dict)
+    used_guesses: Set[int] = field(default_factory=set)
+
+    lock: asyncio.Lock = field(default_factory=asyncio.Lock, repr=False)
+
+    def touch(self) -> None:
+        self.updated_at = now_ts()
+
+    def alive_players(self) -> Dict[str, Player]:
+        return {pid: p for pid, p in self.players.items() if p.alive}
+
+    def max_hand_for(self, p: Player) -> int:
+        return min(3, p.balls_left)
+
+    def max_guess(self) -> int:
+        return sum(self.max_hand_for(p) for p in self.alive_players().values())
+
+    def can_start(self) -> bool:
+        alive = list(self.alive_players().values())
+        if len(alive) < 2:
+            return False
+        return all(p.connected for p in alive)
+
+
+# =========================
+# APP
+# =========================
+app = FastAPI()
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+ROOMS: Dict[str, Room] = {}
+ROOMS_LOCK = asyncio.Lock()
+
+
+# =========================
+# ORDEM / VEZ
+# =========================
+def alive_ids_in_base_order(room: Room) -> List[str]:
+    ids: List[str] = []
+    for pid in room.base_order:
+        p = room.players.get(pid)
+        if p and p.alive:
+            ids.append(pid)
+    return ids
+
+
+def build_round_order(room: Room) -> None:
+    alive_ids = alive_ids_in_base_order(room)
+    if len(alive_ids) < 2:
+        room.round_order = alive_ids
+        return
+
+    if room.starter_pid not in alive_ids:
+        room.starter_pid = alive_ids[0]
+
+    i = alive_ids.index(room.starter_pid)
+    room.round_order = alive_ids[i:] + alive_ids[:i]
+
+
+def next_turn_player(room: Room) -> Optional[str]:
+    if room.phase not in ("hands", "guesses"):
+        return None
+
+    for pid in room.round_order:
+        p = room.players.get(pid)
+        if not p or not p.alive:
+            continue
+        if room.phase == "hands" and not p.hand_submitted:
+            return pid
+        if room.phase == "guesses" and not p.guess_submitted:
+            return pid
+    return None
+
+
+def reset_round(room: Room) -> None:
+    room.hands.clear()
+    room.guesses.clear()
+    room.used_guesses.clear()
+
+    for p in room.players.values():
+        p.hand_submitted = False
+        p.guess_submitted = False
+
+    build_round_order(room)
+    room.turn_player_id = next_turn_player(room)
+
+
+def rotate_starter(room: Room) -> None:
+    alive_ids = alive_ids_in_base_order(room)
+    if not alive_ids:
+        room.starter_pid = None
+        return
+    if room.starter_pid not in alive_ids:
+        room.starter_pid = alive_ids[0]
+        return
+    i = alive_ids.index(room.starter_pid)
+    room.starter_pid = alive_ids[(i + 1) % len(alive_ids)]
+
+
+def all_submitted(room: Room) -> bool:
+    alive = room.alive_players()
+    if room.phase == "hands":
+        return all(p.hand_submitted for p in alive.values())
+    if room.phase == "guesses":
+        return all(p.guess_submitted for p in alive.values())
+    return False
+
+
+# =========================
+# JOGO
+# =========================
+def start_game(room: Room) -> None:
+    room.phase = "hands"
+    room.round_num = 1
+    alive_ids = alive_ids_in_base_order(room)
+    room.starter_pid = alive_ids[0] if alive_ids else None
+    reset_round(room)
+
+
+def restart_game(room: Room) -> None:
+    room.phase = "lobby"
+    room.round_num = 0
+    room.starter_pid = None
+    room.round_order = []
+    room.turn_player_id = None
+
+    room.hands.clear()
+    room.guesses.clear()
+    room.used_guesses.clear()
+
+    for p in room.players.values():
+        p.balls_left = STARTING_BALLS
+        p.hand_submitted = False
+        p.guess_submitted = False
+
+
+def pick_auto_guess(room: Room) -> int:
+    mg = room.max_guess()
+    for g in range(0, mg + 1):
+        if g not in room.used_guesses:
+            return g
+    return 0
+
+
+def resolve_reveal(room: Room) -> dict:
+    total = sum(room.hands.values())
+
+    winner_pid: Optional[str] = None
+    for pid, g in room.guesses.items():
+        if g == total:
+            winner_pid = pid
+            break
+
+    winner_name = None
+    if winner_pid is not None and winner_pid in room.players:
+        w = room.players[winner_pid]
+        w.balls_left -= 1
+        winner_name = w.name
+
+    details = []
+    for pid in room.base_order:
+        p = room.players.get(pid)
+        if not p:
+            continue
+        details.append(
+            {
+                "player_id": pid,
+                "name": p.name,
+                "hand": room.hands.get(pid, 0),
+                "guess": room.guesses.get(pid, None),
+                "balls_after": p.balls_left,
+                "alive_after": p.alive,
+            }
+        )
+
+    game_over = None
+    alive_after = room.alive_players()
+    if len(alive_after) <= 1:
+        room.phase = "over"
+        room.turn_player_id = None
+
+        loser = None
+        if len(alive_after) == 1:
+            loser = next(iter(alive_after.values())).name
+        game_over = {"loser": loser, "reason": "last_player_standing"}
+
+    result = {
+        "round_num": room.round_num,
+        "total": total,
+        "hands": {room.players[pid].name: v for pid, v in room.hands.items() if pid in room.players},
+        "guesses": {room.players[pid].name: v for pid, v in room.guesses.items() if pid in room.players},
+        "winner": winner_name,
+        "details": details,
     }
-    *{ box-sizing: border-box; }
-    body{
-      margin: 0;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      color: var(--text);
-      background:
-        radial-gradient(1200px 600px at 20% 10%, rgba(34,197,94,0.18), transparent 60%),
-        radial-gradient(1000px 600px at 85% 20%, rgba(59,130,246,0.18), transparent 55%),
-        radial-gradient(900px 500px at 50% 90%, rgba(245,158,11,0.14), transparent 60%),
-        var(--bg);
-    }
-    .wrap{ max-width: 1100px; margin: 24px auto; padding: 0 16px 40px; }
-    h1{ margin: 8px 0 6px; font-size: 28px; }
-    .subtitle{ margin: 0 0 14px; color: var(--muted); font-size: 14px; line-height: 1.35; }
+    return {"result": result, "game_over": game_over}
 
-    .card{
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 14px;
-      margin-top: 12px;
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(10px);
-    }
-    .row{ display:flex; gap: 12px; flex-wrap: wrap; align-items: end; }
-    label{ font-size: 12px; color: var(--muted); display:inline-block; margin-bottom: 6px; }
 
-    input, button{
-      padding: 10px 12px;
-      font-size: 16px;
-      border-radius: 12px;
-      border: 1px solid rgba(255,255,255,0.12);
-      background: rgba(0,0,0,0.25);
-      color: var(--text);
-      outline: none;
-    }
-    input{ min-width: 220px; }
+async def advance_phase_if_ready(room: Room) -> Optional[dict]:
+    if room.phase == "hands" and all_submitted(room):
+        room.phase = "guesses"
+        room.turn_player_id = next_turn_player(room)
+        return None
 
-    button{
-      cursor: pointer;
-      background: rgba(255,255,255,0.08);
-      transition: transform .06s ease, background .12s ease, border-color .12s ease;
-      user-select: none;
-    }
-    button:hover{ background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.18); }
-    button:active{ transform: translateY(1px); }
-    button:disabled{ opacity: .5; cursor: not-allowed; transform:none; }
+    if room.phase == "guesses" and all_submitted(room):
+        room.phase = "reveal"
+        reveal = resolve_reveal(room)
 
-    .pills{ display:flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-    .pill{
-      display:inline-flex; gap: 8px; align-items:center;
-      padding: 7px 10px; border-radius: 999px;
-      background: rgba(255,255,255,0.07);
-      border: 1px solid rgba(255,255,255,0.10);
-      font-size: 13px; color: var(--muted);
-    }
-    .dot{ width: 10px; height: 10px; border-radius: 999px; background: rgba(255,255,255,0.28); }
-    .dot.on{ background: var(--good); }
-    .dot.off{ background: rgba(148,163,184,0.75); }
+        if room.phase == "over":
+            return {"type": "reveal", **reveal}
 
-    .error{ color: #fecaca; margin: 10px 0 0; }
-    .hint{ color: var(--muted); margin: 8px 0 0; font-size: 13px; }
-    .sep{ height:1px; background: rgba(255,255,255,0.10); margin: 12px 0; }
+        rotate_starter(room)
+        room.round_num += 1
+        room.phase = "hands"
+        reset_round(room)
+        return {"type": "reveal", **reveal}
 
-    .orderBar{
-      display:flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; align-items:center;
-    }
-    .chip{
-      padding: 7px 10px;
-      border-radius: 999px;
-      border: 1px solid rgba(255,255,255,0.12);
-      background: rgba(255,255,255,0.07);
-      font-size: 13px;
-      color: rgba(255,255,255,0.86);
-      display:inline-flex;
-      gap: 8px;
-      align-items:center;
-      white-space: nowrap;
-    }
-    .chip .miniDot{ width: 8px; height: 8px; border-radius: 999px; background: rgba(255,255,255,0.25); }
-    .chip.turn{
-      background: rgba(245,158,11,0.18);
-      border-color: rgba(245,158,11,0.30);
-      box-shadow: 0 0 0 3px rgba(245,158,11,0.10);
-    }
-    .chip.turn .miniDot{ background: var(--warn); }
+    return None
 
-    .playersGrid{ display:grid; gap: 10px; }
-    .playerRow{
-      display:grid;
-      grid-template-columns: 1fr auto;
-      gap: 12px;
-      align-items:center;
-      padding: 12px;
-      border: 1px solid rgba(255,255,255,0.10);
-      background: rgba(255,255,255,0.05);
-      border-radius: 14px;
-      transition: transform .10s ease, border-color .10s ease, background .10s ease;
-    }
-    .playerRow.turnPlayer{
-      border-color: rgba(245,158,11,0.35);
-      background: rgba(245,158,11,0.10);
-      box-shadow: 0 0 0 3px rgba(245,158,11,0.10);
-      transform: translateY(-1px);
-    }
-    .turnName{
-      color: rgba(255,255,255,0.98);
-      text-shadow: 0 0 18px rgba(245,158,11,0.35);
-    }
 
-    .nameLine{ display:flex; gap: 8px; flex-wrap: wrap; align-items:center; }
-    .miniTag{
-      font-size: 12px; padding: 3px 8px; border-radius: 999px;
-      background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.10);
-      color: rgba(255,255,255,0.80);
-    }
-    .miniTag.host{ background: rgba(245,158,11,0.14); border-color: rgba(245,158,11,0.18); }
-    .miniTag.ok{ background: rgba(34,197,94,0.14); border-color: rgba(34,197,94,0.18); }
-    .miniTag.wait{ background: rgba(148,163,184,0.12); border-color: rgba(148,163,184,0.16); }
+# =========================
+# STATE / BROADCAST
+# =========================
+def room_public_state(room: Room) -> dict:
+    players = []
+    for p in room.players.values():
+        players.append(
+            {
+                "player_id": p.player_id,
+                "name": p.name,
+                "balls_left": p.balls_left,
+                "alive": p.alive,
+                "connected": p.connected,
+                "hand_submitted": p.hand_submitted if room.phase in ("hands", "guesses", "reveal", "over") else False,
+                "guess_submitted": p.guess_submitted if room.phase in ("guesses", "reveal", "over") else False,
+                "is_host": (p.player_id == room.host_player_id),
+            }
+        )
+    players.sort(key=lambda x: (not x["alive"], x["name"].lower()))
 
-    .rightBox{ display:grid; gap: 8px; justify-items:end; }
-    .balls{ display:inline-flex; gap: 5px; align-items:center; }
-    .ball{
-      width: 11px; height: 11px;
-      border-radius: 999px;
-      border: 1px solid rgba(255,255,255,0.50);
-      background: transparent;
-    }
-    .ball.filled{ background: rgba(255,255,255,0.92); border-color: rgba(255,255,255,0.72); }
-    .barWrap{
-      height: 10px; width: 170px;
-      background: rgba(255,255,255,0.10);
-      border: 1px solid rgba(255,255,255,0.10);
-      border-radius: 999px;
-      overflow: hidden;
-    }
-    .barFill{ height: 100%; width: 0%; background: rgba(255,255,255,0.85); transition: width .35s ease; }
+    order_public = []
+    for pid in room.round_order:
+        p = room.players.get(pid)
+        if p:
+            order_public.append({"player_id": pid, "name": p.name})
 
-    .actionsBox p{ margin: 8px 0; color: var(--muted); }
-    .quick{ display:flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
-    .quick button{ font-size: 13px; padding: 8px 10px; border-radius: 999px; }
+    turn_name = None
+    if room.turn_player_id and room.turn_player_id in room.players:
+        turn_name = room.players[room.turn_player_id].name
 
-    /* botão kick */
-    .kickBtn{
-      font-size: 12px;
-      padding: 6px 10px;
-      border-radius: 999px;
-      border: 1px solid rgba(239,68,68,0.25);
-      background: rgba(239,68,68,0.12);
-      color: rgba(255,255,255,0.92);
-    }
-    .kickBtn:hover{ border-color: rgba(239,68,68,0.35); background: rgba(239,68,68,0.18); }
+    # palpites públicos em tempo real (nome + número)
+    guesses_public: List[dict] = []
+    if room.phase in ("guesses", "reveal", "over"):
+        for pid in room.round_order:
+            if pid in room.guesses and pid in room.players:
+                guesses_public.append({"player_id": pid, "name": room.players[pid].name, "guess": room.guesses[pid]})
 
-    /* Overlay resultado (mantém) */
-    .overlay{
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,0.55);
-      display: none; align-items: center; justify-content: center;
-      padding: 18px; z-index: 50;
-    }
-    .overlay.show{ display:flex; }
-    .modal{
-      width: min(900px, 100%);
-      background: rgba(20, 20, 24, 0.88);
-      border: 1px solid rgba(255,255,255,0.14);
-      border-radius: 18px;
-      padding: 16px;
-      box-shadow: 0 30px 80px rgba(0,0,0,0.55);
-      backdrop-filter: blur(12px);
-      position: relative;
-    }
-    .closeBtn{ position:absolute; top: 12px; right: 12px; padding: 8px 10px; border-radius: 12px; }
-    .modal h3{ margin: 0 0 8px; }
-    .modal .meta{ color: var(--muted); font-size: 13px; margin: 0 0 12px; }
-    .bigTotal{ display:flex; gap: 12px; flex-wrap: wrap; align-items:center; margin: 10px 0 12px; }
-    .bigTotal .num{ font-size: 40px; font-weight: 850; }
-    .winnerLine{
-      margin-left: auto;
-      padding: 8px 10px; border-radius: 14px;
-      border: 1px solid rgba(34,197,94,0.22);
-      background: rgba(34,197,94,0.12);
-      font-size: 13px;
-      display:flex; gap: 10px; align-items:center;
-    }
-    .ovTimerWrap{ margin-top: 10px; display: grid; gap: 6px; }
-    .ovTimerBar{
-      height: 10px; border-radius: 999px;
-      border: 1px solid rgba(255,255,255,0.12);
-      background: rgba(255,255,255,0.08);
-      overflow: hidden;
-      box-shadow: inset 0 6px 16px rgba(0,0,0,0.20);
-    }
-    .ovTimerFill{
-      height: 100%;
-      width: 100%;
-      background: rgba(255,255,255,0.85);
-      transition: width .05s linear;
-    }
-    .ovTimerText{ color: var(--muted); font-size: 13px; }
-
-    @media (max-width: 680px){
-      input{ min-width: 160px; width: 100%; }
-      .barWrap{ width: 140px; }
-    }
-  </style>
-</head>
-
-<body>
-  <div class="wrap">
-    <h1>🎱 Jogo das Bolinhas (Online)</h1>
-    <p class="subtitle">
-      Agora com reconexão automática + keepalive + host pode expulsar 👀
-    </p>
-
-    <div class="card">
-      <div class="row">
-        <div>
-          <label>Seu nome</label><br/>
-          <input id="name" placeholder="Leandro" />
-        </div>
-        <div>
-          <label>Sala</label><br/>
-          <input id="room" placeholder="ABC123" />
-        </div>
-        <button id="create">Criar sala</button>
-        <button id="connect">Conectar</button>
-        <button id="copyLink">Copiar link</button>
-      </div>
-
-      <div class="sep"></div>
-
-      <div class="row">
-        <button id="start" disabled>Iniciar (host)</button>
-        <button id="restart" disabled>Reiniciar (host)</button>
-        <button id="skip" disabled>Pular vez (host)</button>
-
-        <div class="pills">
-          <span class="pill"><span class="dot off" id="connDot"></span> <span id="connStatus">Desconectado</span></span>
-          <span class="pill" id="phasePill">fase: -</span>
-          <span class="pill" id="roundPill">rodada: -</span>
-          <span class="pill" id="roomPill">sala: -</span>
-          <span class="pill" id="turnPill">vez: -</span>
-        </div>
-      </div>
-
-      <div class="orderBar" id="orderBar"></div>
-
-      <p id="err" class="error"></p>
-      <p id="hint" class="hint"></p>
-    </div>
-
-    <div class="card actionsBox">
-      <h3 style="margin:0 0 8px;">Ações</h3>
-
-      <div id="handBox" style="display:none;">
-        <p><b>Mão fechada:</b> escolha 0–3 (limitado ao seu estoque). Só aparece quando for sua vez.</p>
-        <div class="row">
-          <input id="hand" type="number" min="0" max="3" value="0" />
-          <button id="sendHand">Enviar mão</button>
-          <span id="handAck" style="color: var(--good); font-weight: 650;"></span>
-        </div>
-        <div class="quick" id="handQuick"></div>
-      </div>
-
-      <div id="guessBox" style="display:none;">
-        <p><b>Palpite:</b> sem repetir. Máximo desta rodada: <b><span id="maxGuess">-</span></b></p>
-        <div class="row">
-          <input id="guess" type="number" min="0" value="0" />
-          <button id="sendGuess">Enviar palpite</button>
-          <span id="guessAck" style="color: var(--good); font-weight: 650;"></span>
-        </div>
-        <p class="subtitle" style="margin-top:10px;">
-          Palpites já dados: <span id="usedGuesses">-</span>
-        </p>
-      </div>
-
-      <div id="waitingBox" style="display:none;">
-        <p class="subtitle" id="waitingText">Aguardando...</p>
-      </div>
-    </div>
-
-    <div class="card">
-      <h3 style="margin:0 0 8px;">Jogadores</h3>
-      <div id="players" class="playersGrid"></div>
-    </div>
-  </div>
-
-  <!-- Reveal Overlay -->
-  <div class="overlay" id="overlay">
-    <div class="modal" role="dialog" aria-modal="true" aria-label="Resultado da rodada">
-      <button class="closeBtn" id="closeOverlay">Fechar</button>
-      <h3 id="ovTitle">Revelação</h3>
-      <p class="meta" id="ovMeta">-</p>
-
-      <div class="bigTotal">
-        <div>
-          <div class="num" id="ovTotal">0</div>
-          <div class="subtitle" style="margin:0;">Total de bolinhas na rodada</div>
-        </div>
-        <div class="winnerLine" id="ovWinner" style="display:none;">
-          <span>🏆</span>
-          <span id="ovWinnerText">-</span>
-        </div>
-      </div>
-
-      <div class="ovTimerWrap">
-        <div class="ovTimerBar"><div class="ovTimerFill" id="ovTimerFill"></div></div>
-        <div class="ovTimerText" id="ovTimerText">Fechando em...</div>
-      </div>
-    </div>
-  </div>
-
-<script>
-  const $ = (id) => document.getElementById(id);
-
-  let ws = null;
-  let playerId = null;
-  let state = null;
-
-  // keepalive
-  let pingTimer = null;
-
-  // reconexão
-  let reconnectTimer = null;
-  let reconnectAttempts = 0;
-  let manualClose = false;
-
-  // overlay timer
-  const OVERLAY_MS = 6500;
-  const OVERLAY_GAMEOVER_MS = 10000;
-  let overlayTimeout = null;
-  let overlayInterval = null;
-
-  function setError(msg = "") { $("err").textContent = msg; }
-  function setHint(msg = "") { $("hint").textContent = msg; }
-
-  function roomKeyStorageKey(roomId) { return `bolinhas:key:${roomId}`; }
-  function currentRoom() { return ($("room").value || "").trim().toUpperCase(); }
-  function setConnected(ok) {
-    $("connStatus").textContent = ok ? "Conectado" : "Desconectado";
-    $("connDot").className = `dot ${ok ? "on" : "off"}`;
-  }
-
-  function showBoxes({ hand=false, guess=false, waiting=false } = {}) {
-    $("handBox").style.display = hand ? "block" : "none";
-    $("guessBox").style.display = guess ? "block" : "none";
-    $("waitingBox").style.display = waiting ? "block" : "none";
-  }
-
-  function you() {
-    if (!state || !playerId) return null;
-    return state.players.find(p => p.player_id === playerId) || null;
-  }
-  function isHost() { return state && playerId && state.host_player_id === playerId; }
-  function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
-
-  // ===== overlay timer =====
-  function stopOverlayTimers(){
-    if (overlayTimeout) clearTimeout(overlayTimeout);
-    if (overlayInterval) clearInterval(overlayInterval);
-    overlayTimeout = null;
-    overlayInterval = null;
-  }
-  function startOverlayTimer(durationMs){
-    stopOverlayTimers();
-
-    const start = Date.now();
-    const end = start + durationMs;
-
-    function tick(){
-      const now = Date.now();
-      const remain = Math.max(0, end - now);
-      const frac = remain / durationMs;
-
-      $("ovTimerFill").style.width = `${(frac * 100).toFixed(1)}%`;
-      $("ovTimerText").textContent = `Fechando em ${Math.ceil(remain/1000)}s`;
-
-      if (remain <= 0) {
-        $("overlay").classList.remove("show");
-        stopOverlayTimers();
-      }
+    return {
+        "room_id": room.room_id,
+        "phase": room.phase,
+        "round_num": room.round_num,
+        "host_player_id": room.host_player_id,
+        "max_guess": room.max_guess() if room.phase in ("hands", "guesses") else None,
+        "used_guesses": sorted(list(room.used_guesses)),
+        "players": players,
+        "round_order": order_public,
+        "turn_player_id": room.turn_player_id,
+        "turn_player_name": turn_name,
+        "starter_player_id": room.starter_pid,
+        "starter_player_name": room.players[room.starter_pid].name if room.starter_pid in room.players else None,
+        "guesses_public": guesses_public,
     }
 
-    tick();
-    overlayInterval = setInterval(tick, 50);
-    overlayTimeout = setTimeout(() => {
-      $("overlay").classList.remove("show");
-      stopOverlayTimers();
-    }, durationMs);
-  }
 
-  function showOverlay(result, gameOver) {
-    $("overlay").classList.add("show");
-    $("ovTitle").textContent = `Revelação — Rodada ${result.round_num}`;
-    $("ovMeta").textContent = gameOver
-      ? `Fim de jogo! Perdedor: ${gameOver.loser ?? "Empate raro"}`
-      : "Resultado da rodada.";
-    $("ovTotal").textContent = String(result.total);
+async def broadcast_room(room: Room, payload: dict) -> None:
+    recipients: List[WebSocket] = []
+    for p in room.players.values():
+        if p.connected and p.ws is not None:
+            recipients.append(p.ws)
 
-    if (result.winner) {
-      $("ovWinner").style.display = "flex";
-      $("ovWinnerText").textContent = `${result.winner} acertou e perde 1 bolinha`;
-    } else {
-      $("ovWinner").style.display = "none";
-      $("ovWinnerText").textContent = "";
-    }
-    startOverlayTimer(gameOver ? OVERLAY_GAMEOVER_MS : OVERLAY_MS);
-  }
+    async def _send(ws: WebSocket) -> None:
+        try:
+            await safe_send(ws, payload)
+        except Exception:
+            pass
 
-  $("closeOverlay").onclick = () => { $("overlay").classList.remove("show"); stopOverlayTimers(); };
-  $("overlay").onclick = (e) => { if (e.target === $("overlay")) { $("overlay").classList.remove("show"); stopOverlayTimers(); } };
+    await asyncio.gather(*(_send(ws) for ws in recipients))
 
-  // ===== UI =====
-  function renderOrderBar(s) {
-    const bar = $("orderBar");
-    bar.innerHTML = "";
 
-    if (!s.round_order || !s.round_order.length || s.phase === "lobby") {
-      const c = document.createElement("div");
-      c.className = "chip";
-      c.innerHTML = `<span class="miniDot"></span><span>Ordem: (ainda não começou)</span>`;
-      bar.appendChild(c);
-      return;
-    }
+async def push_state(room: Room) -> None:
+    await broadcast_room(room, {"type": "state", "state": room_public_state(room)})
 
-    s.round_order.forEach((pl, idx) => {
-      const chip = document.createElement("div");
-      chip.className = "chip" + (pl.player_id === s.turn_player_id ? " turn" : "");
-      chip.innerHTML = `<span class="miniDot"></span><span>${idx+1}. ${pl.name}</span>`;
-      bar.appendChild(chip);
-    });
-  }
 
-  function ballsHTML(ballsLeft, maxBalls = 3) {
-    const wrap = document.createElement("span");
-    wrap.className = "balls";
-    for (let i = 0; i < maxBalls; i++) {
-      const b = document.createElement("span");
-      b.className = "ball" + (i < ballsLeft ? " filled" : "");
-      wrap.appendChild(b);
-    }
-    return wrap;
-  }
+# =========================
+# ROTAS HTTP
+# =========================
+@app.get("/")
+async def root() -> HTMLResponse:
+    html_path = STATIC_DIR / "index.html"
+    return HTMLResponse(html_path.read_text(encoding="utf-8"))
 
-  function renderPlayers(s) {
-    const list = $("players");
-    list.innerHTML = "";
 
-    s.players.forEach(p => {
-      const row = document.createElement("div");
-      row.className = "playerRow";
+@app.get("/api/create-room")
+async def api_create_room() -> dict:
+    async with ROOMS_LOCK:
+        rid = gen_room_id()
+        while rid in ROOMS:
+            rid = gen_room_id()
+        ROOMS[rid] = Room(room_id=rid)
+    return {"room_id": rid}
 
-      const isTurn = (p.player_id === s.turn_player_id);
-      if (isTurn) row.classList.add("turnPlayer");
 
-      const pct = clamp((p.balls_left / 3) * 100, 0, 100);
+# =========================
+# WEBSOCKET
+# =========================
+@app.websocket("/ws/{room_id}")
+async def ws_room(
+    websocket: WebSocket,
+    room_id: str,
+    name: str = Query(default="Jogador"),
+    key: Optional[str] = Query(default=None),
+) -> None:
+    await websocket.accept()
+    room_id = room_id.upper().strip()
 
-      row.innerHTML = `
-        <div>
-          <div class="nameLine">
-            <b class="${isTurn ? "turnName" : ""}"></b>
-            ${p.is_host ? `<span class="miniTag host">host</span>` : ""}
-            ${!p.alive ? `<span class="miniTag">fora</span>` : ""}
-            ${(s.phase !== "lobby")
-              ? `<span class="miniTag ${p.hand_submitted ? "ok" : "wait"}">mão ${p.hand_submitted ? "✅" : "⏳"}</span>` : ""}
-            ${(s.phase === "guesses" || s.phase === "reveal" || s.phase === "over")
-              ? `<span class="miniTag ${p.guess_submitted ? "ok" : "wait"}">palpite ${p.guess_submitted ? "✅" : "⏳"}</span>` : ""}
-            ${isTurn ? `<span class="miniTag host">VEZ</span>` : ""}
-          </div>
-          <div class="subtitle" style="margin:6px 0 0;">
-            ${p.connected ? "🟢 online" : "⚫ offline"} • estoque: ${p.balls_left}/3
-          </div>
-        </div>
-        <div class="rightBox"></div>
-      `;
+    async with ROOMS_LOCK:
+        room = ROOMS.get(room_id)
+        if room is None:
+            room = Room(room_id=room_id)
+            ROOMS[room_id] = room
 
-      row.querySelector("b").textContent = p.name + (p.player_id === playerId ? " (VOCÊ)" : "");
+    player: Optional[Player] = None
+    is_reconnect = False
 
-      const rb = row.querySelector(".rightBox");
-      rb.appendChild(ballsHTML(p.balls_left, 3));
+    async with room.lock:
+        room.touch()
 
-      const barWrap = document.createElement("div");
-      barWrap.className = "barWrap";
-      const barFill = document.createElement("div");
-      barFill.className = "barFill";
-      barFill.style.width = `${pct}%`;
-      barWrap.appendChild(barFill);
-      rb.appendChild(barWrap);
+        # reconectar por key
+        if key:
+            for p in room.players.values():
+                if p.key == key:
+                    player = p
+                    is_reconnect = True
+                    break
 
-      // botão expulsar (host)
-      if (isHost() && p.player_id !== playerId) {
-        const kick = document.createElement("button");
-        kick.className = "kickBtn";
-        kick.textContent = "Expulsar";
-        kick.onclick = () => {
-          const ok = confirm(`Remover "${p.name}" da sala?`);
-          if (ok) send("kick", { target_id: p.player_id });
-        };
-        rb.appendChild(kick);
-      }
+        # novo player
+        if player is None:
+            if len(room.players) >= MAX_PLAYERS_PER_ROOM:
+                await safe_send(websocket, {"type": "error", "message": "Sala cheia (máx 10)."})
+                await websocket.close()
+                return
 
-      list.appendChild(row);
-    });
-  }
+            pid = gen_player_id()
+            pkey = gen_player_key()
+            player = Player(
+                player_id=pid,
+                key=pkey,
+                name=(name.strip() or "Jogador")[:20],
+                ws=websocket,
+                connected=True,
+            )
+            room.players[pid] = player
+            room.base_order.append(pid)
 
-  function renderHandQuick(maxHand) {
-    const q = $("handQuick");
-    q.innerHTML = "";
-    for (let v = 0; v <= 3; v++) {
-      const b = document.createElement("button");
-      b.textContent = `${v}`;
-      b.disabled = v > maxHand;
-      b.onclick = () => { $("hand").value = String(v); };
-      q.appendChild(b);
-    }
-  }
+            if room.host_player_id is None:
+                room.host_player_id = pid
 
-  function renderGuessesPublic(s) {
-    $("usedGuesses").textContent = (s.used_guesses || []).join(", ") || "-";
-    const gp = s.guesses_public || [];
-    if (s.phase === "guesses" && gp.length) {
-      $("usedGuesses").textContent = gp.map(x => `${x.name}: ${x.guess}`).join("  •  ");
-    }
-  }
+        # bind
+        player.ws = websocket
+        player.connected = True
+        player.disconnected_at = None
 
-  function renderState(s) {
-    state = s;
+        # se jogo já está rolando, e ordem/turn ficaram inconsistentes, tenta reconstruir
+        if room.phase in ("hands", "guesses"):
+            build_round_order(room)
+            if room.turn_player_id is None:
+                room.turn_player_id = next_turn_player(room)
 
-    $("phasePill").textContent = `fase: ${s.phase}`;
-    $("roundPill").textContent = `rodada: ${s.round_num || "-"}`;
-    $("roomPill").textContent = `sala: ${s.room_id || "-"}`;
-    $("turnPill").textContent = s.turn_player_name ? `vez: ${s.turn_player_name}` : "vez: -";
+    await safe_send(
+        websocket,
+        {
+            "type": "joined",
+            "room_id": room_id,
+            "player_id": player.player_id,
+            "player_key": player.key,
+            "is_reconnect": is_reconnect,
+        },
+    )
 
-    $("start").disabled = !(s.phase === "lobby" && isHost());
-    $("restart").disabled = !isHost();
-    $("skip").disabled = !(isHost() && (s.phase === "hands" || s.phase === "guesses"));
+    await push_state(room)
 
-    $("maxGuess").textContent = (s.max_guess ?? "-");
+    try:
+        while True:
+            raw = await websocket.receive_text()
+            msg = json.loads(raw)
+            mtype = msg.get("type")
 
-    renderGuessesPublic(s);
-    renderOrderBar(s);
-    renderPlayers(s);
+            reveal_payload = None
 
-    const me = you();
-    $("handAck").textContent = "";
-    $("guessAck").textContent = "";
+            async with room.lock:
+                room.touch()
+                p = room.players.get(player.player_id)
+                if p is None:
+                    break
 
-    if (!me) {
-      showBoxes({ waiting: true });
-      $("waitingText").textContent = "Você ainda não foi reconhecido na sala.";
-      return;
-    }
+                if mtype == "start":
+                    if p.player_id != room.host_player_id:
+                        await safe_send(websocket, {"type": "error", "message": "Apenas o host pode iniciar."})
+                        continue
+                    if room.phase != "lobby":
+                        await safe_send(websocket, {"type": "error", "message": "Jogo já está em andamento."})
+                        continue
+                    if not room.can_start():
+                        await safe_send(websocket, {"type": "error", "message": "Precisa de pelo menos 2 jogadores vivos e conectados."})
+                        continue
+                    start_game(room)
 
-    if (!me.alive && s.phase !== "lobby") {
-      showBoxes({ waiting: true });
-      $("waitingText").textContent = "Você está fora do jogo. Agora é espectador. 🍿";
-      return;
-    }
+                elif mtype == "restart":
+                    if p.player_id != room.host_player_id:
+                        await safe_send(websocket, {"type": "error", "message": "Apenas o host pode reiniciar."})
+                        continue
+                    restart_game(room)
 
-    if (s.phase === "lobby") {
-      showBoxes({ waiting: true });
-      $("waitingText").textContent = isHost()
-        ? "Você é o host. Quando tiver pelo menos 2 jogadores, clique em Iniciar."
-        : "Aguardando o host iniciar...";
-      return;
-    }
+                elif mtype == "skip":
+                    # host pode destravar a vez atual
+                    if p.player_id != room.host_player_id:
+                        await safe_send(websocket, {"type": "error", "message": "Apenas o host pode pular vez."})
+                        continue
+                    if room.phase not in ("hands", "guesses"):
+                        continue
 
-    if (s.phase === "hands") {
-      if (me.hand_submitted) {
-        showBoxes({ waiting: true });
-        $("waitingText").textContent = `Você já enviou sua mão. Aguardando... (Vez de: ${s.turn_player_name || "?"})`;
-        return;
-      }
-      if (s.turn_player_id !== me.player_id) {
-        showBoxes({ waiting: true });
-        $("waitingText").textContent = `Aguardando... agora é a vez de ${s.turn_player_name || "alguém"}.`;
-        return;
-      }
+                    cur = room.turn_player_id
+                    if not cur or cur not in room.players:
+                        continue
+                    curp = room.players[cur]
+                    if not curp.alive:
+                        continue
 
-      const maxHand = Math.min(3, me.balls_left);
-      $("hand").max = String(maxHand);
-      $("hand").value = "0";
-      renderHandQuick(maxHand);
-      showBoxes({ hand: true });
-      return;
-    }
+                    if room.phase == "hands" and not curp.hand_submitted:
+                        room.hands[cur] = 0
+                        curp.hand_submitted = True
 
-    if (s.phase === "guesses") {
-      if (me.guess_submitted) {
-        showBoxes({ waiting: true });
-        $("waitingText").textContent = `Você já enviou seu palpite. Aguardando... (Vez de: ${s.turn_player_name || "?"})`;
-        return;
-      }
-      if (s.turn_player_id !== me.player_id) {
-        showBoxes({ waiting: true });
-        $("waitingText").textContent = `Aguardando... agora é a vez de ${s.turn_player_name || "alguém"}.`;
-        return;
-      }
+                    if room.phase == "guesses" and not curp.guess_submitted:
+                        g = pick_auto_guess(room)
+                        room.guesses[cur] = g
+                        room.used_guesses.add(g)
+                        curp.guess_submitted = True
 
-      $("guess").min = "0";
-      $("guess").max = String(s.max_guess ?? 0);
-      $("guess").value = "0";
-      showBoxes({ guess: true });
-      return;
-    }
+                    room.turn_player_id = next_turn_player(room)
+                    reveal_payload = await advance_phase_if_ready(room)
 
-    showBoxes({ waiting: true });
-    $("waitingText").textContent = s.phase === "over"
-      ? (isHost() ? "Fim de jogo. Você pode reiniciar se quiser." : "Fim de jogo. Aguarde o host reiniciar.")
-      : "Revelando resultado...";
-  }
+                elif mtype == "hand":
+                    if room.phase != "hands":
+                        continue
+                    if not p.alive or p.hand_submitted:
+                        continue
+                    if room.turn_player_id != p.player_id:
+                        await safe_send(websocket, {"type": "error", "message": "Não é sua vez."})
+                        continue
 
-  // ===== conexão + reconexão =====
-  function stopPing(){
-    if (pingTimer) clearInterval(pingTimer);
-    pingTimer = null;
-  }
+                    v = int(msg.get("value", 0))
+                    v = max(0, min(room.max_hand_for(p), v))
 
-  function startPing(){
-    stopPing();
-    pingTimer = setInterval(() => {
-      if (ws && ws.readyState === 1) {
-        try { ws.send(JSON.stringify({ type: "ping" })); } catch {}
-      }
-    }, 20000); // 20s
-  }
+                    room.hands[p.player_id] = v
+                    p.hand_submitted = True
 
-  function scheduleReconnect(immediate=false){
-    if (manualClose) return;
+                    room.turn_player_id = next_turn_player(room)
+                    reveal_payload = await advance_phase_if_ready(room)
 
-    clearTimeout(reconnectTimer);
-    const base = immediate ? 200 : 600;
-    const delay = Math.min(15000, base * Math.pow(2, reconnectAttempts)) + Math.floor(Math.random() * 400);
-    reconnectAttempts++;
+                elif mtype == "guess":
+                    if room.phase != "guesses":
+                        continue
+                    if not p.alive or p.guess_submitted:
+                        continue
+                    if room.turn_player_id != p.player_id:
+                        await safe_send(websocket, {"type": "error", "message": "Não é sua vez."})
+                        continue
 
-    setHint(`Reconectando em ${Math.ceil(delay/1000)}s...`);
-    reconnectTimer = setTimeout(() => {
-      if (!manualClose) connect(true);
-    }, delay);
-  }
+                    g = int(msg.get("value", 0))
+                    g = max(0, min(room.max_guess(), g))
 
-  function connect(isAuto=false) {
-    setError("");
+                    if g in room.used_guesses:
+                        await safe_send(websocket, {"type": "error", "message": "Palpite já usado. Escolha outro."})
+                        continue
 
-    const name = ($("name").value || "Jogador").trim();
-    const room = currentRoom();
-    if (!room) { setError("Informe uma sala ou clique em Criar sala."); return; }
+                    room.guesses[p.player_id] = g
+                    room.used_guesses.add(g)
+                    p.guess_submitted = True
 
-    const storedKey = localStorage.getItem(roomKeyStorageKey(room));
-    const keyParam = storedKey ? `&key=${encodeURIComponent(storedKey)}` : "";
+                    room.turn_player_id = next_turn_player(room)
+                    reveal_payload = await advance_phase_if_ready(room)
 
-    const proto = location.protocol === "https:" ? "wss" : "ws";
-    const url = `${proto}://${location.host}/ws/${room}?name=${encodeURIComponent(name)}${keyParam}`;
+                elif mtype == "leave":
+                    room.players.pop(p.player_id, None)
+                    if p.player_id in room.base_order:
+                        room.base_order.remove(p.player_id)
 
-    try {
-      if (ws && ws.readyState === 1) ws.close();
-    } catch {}
+                    if room.host_player_id == p.player_id:
+                        room.host_player_id = next(iter(room.players.keys()), None)
 
-    ws = new WebSocket(url);
+                    if room.phase in ("hands", "guesses"):
+                        reset_round(room)
 
-    ws.onopen = () => {
-      setConnected(true);
-      reconnectAttempts = 0;
-      if (isAuto) setHint("Reconectado ✅");
-      else setHint(`Conectado na sala ${room}.`);
-      startPing();
-    };
+                    break
 
-    ws.onclose = () => {
-      setConnected(false);
-      stopPing();
-      if (!manualClose) scheduleReconnect(false);
-    };
+            await push_state(room)
+            if reveal_payload:
+                await broadcast_room(room, reveal_payload)
+                await push_state(room)
 
-    ws.onerror = () => {
-      setError("Erro no WebSocket.");
-    };
+    except WebSocketDisconnect:
+        pass
+    except Exception:
+        pass
+    finally:
+        async with room.lock:
+            p = room.players.get(player.player_id)
+            if p is not None:
+                p.connected = False
+                p.ws = None
+                p.disconnected_at = now_ts()
 
-    ws.onmessage = (ev) => {
-      const msg = JSON.parse(ev.data);
+        await push_state(room)
 
-      if (msg.type === "error") { setError(msg.message); return; }
-      if (msg.type === "pong") { return; }
 
-      if (msg.type === "kicked") {
-        manualClose = true;
-        stopPing();
-        setError(msg.message || "Você foi removido.");
-        try { ws.close(); } catch {}
-        return;
-      }
+# =========================
+# LIMPEZA
+# =========================
+async def cleanup_loop() -> None:
+    while True:
+        await asyncio.sleep(CLEANUP_EVERY_SECONDS)
 
-      if (msg.type === "joined") {
-        playerId = msg.player_id;
-        $("room").value = msg.room_id;
-        localStorage.setItem(roomKeyStorageKey(msg.room_id), msg.player_key);
-        location.hash = msg.room_id;
-        if (!isAuto) setHint(`Entrou na sala ${msg.room_id}.`);
-        return;
-      }
+        async with ROOMS_LOCK:
+            to_delete: List[str] = []
+            now = now_ts()
 
-      if (msg.type === "state") { renderState(msg.state); return; }
-      if (msg.type === "reveal") { showOverlay(msg.result, msg.game_over); return; }
-    };
-  }
+            for rid, room in ROOMS.items():
+                async with room.lock:
+                    purge_pids = []
+                    for pid, p in room.players.items():
+                        if not p.connected and p.disconnected_at is not None:
+                            if (now - p.disconnected_at) > DISCONNECTED_PURGE_SECONDS:
+                                purge_pids.append(pid)
 
-  function send(type, payload = {}) {
-    setError("");
-    if (!ws || ws.readyState !== 1) { setError("Você não está conectado (tentando reconectar...)."); scheduleReconnect(true); return; }
-    ws.send(JSON.stringify({ type, ...payload }));
-  }
+                    for pid in purge_pids:
+                        room.players.pop(pid, None)
+                        if pid in room.base_order:
+                            room.base_order.remove(pid)
 
-  $("create").onclick = async () => {
-    setError("");
-    const res = await fetch("/api/create-room");
-    const data = await res.json();
-    $("room").value = data.room_id;
-    location.hash = data.room_id;
-    setHint(`Sala criada: ${data.room_id}. Clique em Conectar.`);
-  };
+                    if room.host_player_id not in room.players:
+                        room.host_player_id = next(iter(room.players.keys()), None)
 
-  $("connect").onclick = () => {
-    manualClose = false;
-    connect(false);
-  };
+                    if not room.players and (now - room.updated_at) > ROOM_IDLE_PURGE_SECONDS:
+                        to_delete.append(rid)
 
-  $("copyLink").onclick = async () => {
-    const room = currentRoom();
-    if (!room) return setError("Sem sala para copiar link.");
-    const url = `${location.origin}/#${room}`;
-    try { await navigator.clipboard.writeText(url); setHint("Link copiado!"); }
-    catch { setHint(url); }
-  };
+            for rid in to_delete:
+                ROOMS.pop(rid, None)
 
-  $("start").onclick = () => send("start");
-  $("restart").onclick = () => send("restart");
-  $("skip").onclick = () => send("skip");
 
-  $("sendHand").onclick = () => {
-    const v = parseInt($("hand").value || "0", 10);
-    send("hand", { value: v });
-    $("handAck").textContent = "Mão enviada ✅";
-  };
-
-  $("sendGuess").onclick = () => {
-    const v = parseInt($("guess").value || "0", 10);
-    if (state && state.used_guesses && state.used_guesses.includes(v)) {
-      setError("Esse palpite já foi usado. Escolha outro.");
-      return;
-    }
-    send("guess", { value: v });
-    $("guessAck").textContent = "Palpite enviado ✅";
-  };
-
-  // quando voltar pra aba, tenta reconectar rápido se caiu
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") {
-      if (!ws || ws.readyState !== 1) scheduleReconnect(true);
-    }
-  });
-
-  // se fechar a aba, encerra sem ficar tentando reconectar
-  window.addEventListener("beforeunload", () => {
-    manualClose = true;
-    stopPing();
-    try { if (ws) ws.close(); } catch {}
-  });
-
-  window.addEventListener("load", () => {
-    const hash = (location.hash || "").replace("#", "").trim().toUpperCase();
-    if (hash) $("room").value = hash;
-  });
-</script>
-</body>
-</html>
+@app.on_event("startup")
+async def on_startup() -> None:
+    asyncio.create_task(cleanup_loop())
