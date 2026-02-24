@@ -1,366 +1,7 @@
-<!doctype html>
-<html lang="pt-br">
-<head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>🎱 Jogo das Bolinhas (Online)</title>
-
-  <style>
-    :root{
-      --bg: #0b0c10;
-      --card: rgba(255,255,255,0.06);
-      --border: rgba(255,255,255,0.10);
-      --text: rgba(255,255,255,0.92);
-      --muted: rgba(255,255,255,0.65);
-      --good: #22c55e;
-      --warn: #f59e0b;
-      --bad: #ef4444;
-      --shadow: 0 10px 30px rgba(0,0,0,0.35);
-    }
-    *{ box-sizing: border-box; }
-    body{
-      margin: 0;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      color: var(--text);
-      background:
-        radial-gradient(1200px 600px at 20% 10%, rgba(34,197,94,0.18), transparent 60%),
-        radial-gradient(1000px 600px at 85% 20%, rgba(59,130,246,0.18), transparent 55%),
-        radial-gradient(900px 500px at 50% 90%, rgba(245,158,11,0.14), transparent 60%),
-        var(--bg);
-    }
-    .wrap{ max-width: 1100px; margin: 24px auto; padding: 0 16px 40px; }
-    h1{ margin: 8px 0 6px; font-size: 28px; }
-    .subtitle{ margin: 0 0 14px; color: var(--muted); font-size: 14px; line-height: 1.35; }
-
-    .card{
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 14px;
-      margin-top: 12px;
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(10px);
-    }
-    .row{ display:flex; gap: 12px; flex-wrap: wrap; align-items: end; }
-    label{ font-size: 12px; color: var(--muted); display:inline-block; margin-bottom: 6px; }
-
-    input, button{
-      padding: 10px 12px;
-      font-size: 16px;
-      border-radius: 12px;
-      border: 1px solid rgba(255,255,255,0.12);
-      background: rgba(0,0,0,0.25);
-      color: var(--text);
-      outline: none;
-    }
-    input{ min-width: 220px; }
-
-    button{
-      cursor: pointer;
-      background: rgba(255,255,255,0.08);
-      transition: transform .06s ease, background .12s ease, border-color .12s ease;
-      user-select: none;
-    }
-    button:hover{ background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.18); }
-    button:active{ transform: translateY(1px); }
-    button:disabled{ opacity: .5; cursor: not-allowed; transform:none; }
-
-    .pills{ display:flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-    .pill{
-      display:inline-flex; gap: 8px; align-items:center;
-      padding: 7px 10px; border-radius: 999px;
-      background: rgba(255,255,255,0.07);
-      border: 1px solid rgba(255,255,255,0.10);
-      font-size: 13px; color: var(--muted);
-    }
-    .dot{ width: 10px; height: 10px; border-radius: 999px; background: rgba(255,255,255,0.28); }
-    .dot.on{ background: var(--good); }
-    .dot.off{ background: rgba(148,163,184,0.75); }
-
-    .error{ color: #fecaca; margin: 10px 0 0; }
-    .hint{ color: var(--muted); margin: 8px 0 0; font-size: 13px; }
-    .sep{ height:1px; background: rgba(255,255,255,0.10); margin: 12px 0; }
-
-    .orderBar{
-      display:flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; align-items:center;
-    }
-    .chip{
-      padding: 7px 10px;
-      border-radius: 999px;
-      border: 1px solid rgba(255,255,255,0.12);
-      background: rgba(255,255,255,0.07);
-      font-size: 13px;
-      color: rgba(255,255,255,0.86);
-      display:inline-flex;
-      gap: 8px;
-      align-items:center;
-      white-space: nowrap;
-    }
-    .chip .miniDot{ width: 8px; height: 8px; border-radius: 999px; background: rgba(255,255,255,0.25); }
-    .chip.turn{
-      background: rgba(245,158,11,0.18);
-      border-color: rgba(245,158,11,0.30);
-      box-shadow: 0 0 0 3px rgba(245,158,11,0.10);
-    }
-    .chip.turn .miniDot{ background: var(--warn); }
-
-    .playersGrid{ display:grid; gap: 10px; }
-    .playerRow{
-      display:grid;
-      grid-template-columns: 1fr auto;
-      gap: 12px;
-      align-items:center;
-      padding: 12px;
-      border: 1px solid rgba(255,255,255,0.10);
-      background: rgba(255,255,255,0.05);
-      border-radius: 14px;
-      transition: transform .10s ease, border-color .10s ease, background .10s ease;
-    }
-    .playerRow.turnPlayer{
-      border-color: rgba(245,158,11,0.35);
-      background: rgba(245,158,11,0.10);
-      box-shadow: 0 0 0 3px rgba(245,158,11,0.10);
-      transform: translateY(-1px);
-    }
-    .turnName{
-      color: rgba(255,255,255,0.98);
-      text-shadow: 0 0 18px rgba(245,158,11,0.35);
-    }
-
-    .nameLine{ display:flex; gap: 8px; flex-wrap: wrap; align-items:center; }
-    .miniTag{
-      font-size: 12px; padding: 3px 8px; border-radius: 999px;
-      background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.10);
-      color: rgba(255,255,255,0.80);
-    }
-    .miniTag.host{ background: rgba(245,158,11,0.14); border-color: rgba(245,158,11,0.18); }
-    .miniTag.ok{ background: rgba(34,197,94,0.14); border-color: rgba(34,197,94,0.18); }
-    .miniTag.wait{ background: rgba(148,163,184,0.12); border-color: rgba(148,163,184,0.16); }
-
-    .rightBox{ display:grid; gap: 8px; justify-items:end; }
-    .balls{ display:inline-flex; gap: 5px; align-items:center; }
-    .ball{
-      width: 11px; height: 11px;
-      border-radius: 999px;
-      border: 1px solid rgba(255,255,255,0.50);
-      background: transparent;
-    }
-    .ball.filled{ background: rgba(255,255,255,0.92); border-color: rgba(255,255,255,0.72); }
-    .barWrap{
-      height: 10px; width: 170px;
-      background: rgba(255,255,255,0.10);
-      border: 1px solid rgba(255,255,255,0.10);
-      border-radius: 999px;
-      overflow: hidden;
-    }
-    .barFill{ height: 100%; width: 0%; background: rgba(255,255,255,0.85); transition: width .35s ease; }
-
-    .actionsBox p{ margin: 8px 0; color: var(--muted); }
-    .quick{ display:flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
-    .quick button{ font-size: 13px; padding: 8px 10px; border-radius: 999px; }
-
-    /* botão kick */
-    .kickBtn{
-      font-size: 12px;
-      padding: 6px 10px;
-      border-radius: 999px;
-      border: 1px solid rgba(239,68,68,0.25);
-      background: rgba(239,68,68,0.12);
-      color: rgba(255,255,255,0.92);
-    }
-    .kickBtn:hover{ border-color: rgba(239,68,68,0.35); background: rgba(239,68,68,0.18); }
-
-    /* Overlay resultado (mantém) */
-    .overlay{
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,0.55);
-      display: none; align-items: center; justify-content: center;
-      padding: 18px; z-index: 50;
-    }
-    .overlay.show{ display:flex; }
-    .modal{
-      width: min(900px, 100%);
-      background: rgba(20, 20, 24, 0.88);
-      border: 1px solid rgba(255,255,255,0.14);
-      border-radius: 18px;
-      padding: 16px;
-      box-shadow: 0 30px 80px rgba(0,0,0,0.55);
-      backdrop-filter: blur(12px);
-      position: relative;
-    }
-    .closeBtn{ position:absolute; top: 12px; right: 12px; padding: 8px 10px; border-radius: 12px; }
-    .modal h3{ margin: 0 0 8px; }
-    .modal .meta{ color: var(--muted); font-size: 13px; margin: 0 0 12px; }
-    .bigTotal{ display:flex; gap: 12px; flex-wrap: wrap; align-items:center; margin: 10px 0 12px; }
-    .bigTotal .num{ font-size: 40px; font-weight: 850; }
-    .winnerLine{
-      margin-left: auto;
-      padding: 8px 10px; border-radius: 14px;
-      border: 1px solid rgba(34,197,94,0.22);
-      background: rgba(34,197,94,0.12);
-      font-size: 13px;
-      display:flex; gap: 10px; align-items:center;
-    }
-    .ovTimerWrap{ margin-top: 10px; display: grid; gap: 6px; }
-    .ovTimerBar{
-      height: 10px; border-radius: 999px;
-      border: 1px solid rgba(255,255,255,0.12);
-      background: rgba(255,255,255,0.08);
-      overflow: hidden;
-      box-shadow: inset 0 6px 16px rgba(0,0,0,0.20);
-    }
-    .ovTimerFill{
-      height: 100%;
-      width: 100%;
-      background: rgba(255,255,255,0.85);
-      transition: width .05s linear;
-    }
-    .ovTimerText{ color: var(--muted); font-size: 13px; }
-
-    @media (max-width: 680px){
-      input{ min-width: 160px; width: 100%; }
-      .barWrap{ width: 140px; }
-    }
-  </style>
-</head>
-
-<body>
-  <div class="wrap">
-    <h1>🎱 Jogo das Bolinhas (Online)</h1>
-    <p class="subtitle">
-      Agora com reconexão automática + keepalive + host pode expulsar 👀
-    </p>
-
-    <div class="card">
-      <div class="row">
-        <div>
-          <label>Seu nome</label><br/>
-          <input id="name" placeholder="Leandro" />
-        </div>
-        <div>
-          <label>Sala</label><br/>
-          <input id="room" placeholder="ABC123" />
-        </div>
-        <button id="create">Criar sala</button>
-        <button id="connect">Conectar</button>
-        <button id="copyLink">Copiar link</button>
-      </div>
-
-      <div class="sep"></div>
-
-      <div class="row">
-        <button id="start" disabled>Iniciar (host)</button>
-        <button id="restart" disabled>Reiniciar (host)</button>
-        <button id="skip" disabled>Pular vez (host)</button>
-
-        <div class="pills">
-          <span class="pill"><span class="dot off" id="connDot"></span> <span id="connStatus">Desconectado</span></span>
-          <span class="pill" id="phasePill">fase: -</span>
-          <span class="pill" id="roundPill">rodada: -</span>
-          <span class="pill" id="roomPill">sala: -</span>
-          <span class="pill" id="turnPill">vez: -</span>
-        </div>
-      </div>
-
-      <div class="orderBar" id="orderBar"></div>
-
-      <p id="err" class="error"></p>
-      <p id="hint" class="hint"></p>
-    </div>
-
-    <div class="card actionsBox">
-      <h3 style="margin:0 0 8px;">Ações</h3>
-
-      <div id="handBox" style="display:none;">
-        <p><b>Mão fechada:</b> escolha 0–3 (limitado ao seu estoque). Só aparece quando for sua vez.</p>
-        <div class="row">
-          <input id="hand" type="number" min="0" max="3" value="0" />
-          <button id="sendHand">Enviar mão</button>
-          <span id="handAck" style="color: var(--good); font-weight: 650;"></span>
-        </div>
-        <div class="quick" id="handQuick"></div>
-      </div>
-
-      <div id="guessBox" style="display:none;">
-        <p><b>Palpite:</b> sem repetir. Máximo desta rodada: <b><span id="maxGuess">-</span></b></p>
-        <div class="row">
-          <input id="guess" type="number" min="0" value="0" />
-          <button id="sendGuess">Enviar palpite</button>
-          <span id="guessAck" style="color: var(--good); font-weight: 650;"></span>
-        </div>
-        <p class="subtitle" style="margin-top:10px;">
-          Palpites já dados: <span id="usedGuesses">-</span>
-        </p>
-      </div>
-
-      <div id="waitingBox" style="display:none;">
-        <p class="subtitle" id="waitingText">Aguardando...</p>
-      </div>
-    </div>
-
-    <!-- ✅ NOVO: PAINEL DA PARTIDA -->
-    <div class="card">
-      <h3 style="margin:0 0 8px;">Painel da Partida</h3>
-      <p class="subtitle" style="margin:0 0 12px;">
-        Histórico das rodadas + gráfico do total de bolinhas. (Enquanto a página estiver aberta.)
-      </p>
-
-      <div class="row" style="align-items:center;">
-        <span class="pill" id="panelPhase">fase: -</span>
-        <span class="pill" id="panelRound">rodada: -</span>
-        <span class="pill" id="panelTurn">vez: -</span>
-        <button id="clearHistory">Limpar histórico</button>
-      </div>
-
-      <div style="margin-top:12px;">
-        <canvas id="roundChart" width="980" height="220" style="
-          width: 100%;
-          max-width: 100%;
-          background: rgba(255,255,255,0.04);
-          border: 1px solid rgba(255,255,255,0.10);
-          border-radius: 14px;
-        "></canvas>
-      </div>
-
-      <div class="sep"></div>
-
-      <div id="roundHistory" style="display:grid; gap:10px;"></div>
-    </div>
-
-    <div class="card">
-      <h3 style="margin:0 0 8px;">Jogadores</h3>
-      <div id="players" class="playersGrid"></div>
-    </div>
-  </div>
-
-  <!-- Reveal Overlay -->
-  <div class="overlay" id="overlay">
-    <div class="modal" role="dialog" aria-modal="true" aria-label="Resultado da rodada">
-      <button class="closeBtn" id="closeOverlay">Fechar</button>
-      <h3 id="ovTitle">Revelação</h3>
-      <p class="meta" id="ovMeta">-</p>
-
-      <div class="bigTotal">
-        <div>
-          <div class="num" id="ovTotal">0</div>
-          <div class="subtitle" style="margin:0;">Total de bolinhas na rodada</div>
-        </div>
-        <div class="winnerLine" id="ovWinner" style="display:none;">
-          <span>🏆</span>
-          <span id="ovWinnerText">-</span>
-        </div>
-      </div>
-
-      <div class="ovTimerWrap">
-        <div class="ovTimerBar"><div class="ovTimerFill" id="ovTimerFill"></div></div>
-        <div class="ovTimerText" id="ovTimerText">Fechando em...</div>
-      </div>
-    </div>
-  </div>
-
 <script>
   const $ = (id) => document.getElementById(id);
 
+  // ===== estado =====
   let ws = null;
   let playerId = null;
   let state = null;
@@ -393,8 +34,8 @@
 
   function pushRevealToHistory(revealMsg){
     if (!revealMsg || !revealMsg.result) return;
-
     const r = revealMsg.result;
+
     matchHistory.push({
       round_num: r.round_num,
       total: r.total,
@@ -465,7 +106,6 @@
   function drawRoundChart(){
     const c = $("roundChart");
     const ctx = c.getContext("2d");
-
     const W = c.width;
     const H = c.height;
 
@@ -535,6 +175,7 @@
 
   function roomKeyStorageKey(roomId) { return `bolinhas:key:${roomId}`; }
   function currentRoom() { return ($("room").value || "").trim().toUpperCase(); }
+
   function setConnected(ok) {
     $("connStatus").textContent = ok ? "Conectado" : "Desconectado";
     $("connDot").className = `dot ${ok ? "on" : "off"}`;
@@ -560,6 +201,7 @@
     overlayTimeout = null;
     overlayInterval = null;
   }
+
   function startOverlayTimer(durationMs){
     stopOverlayTimers();
 
@@ -603,6 +245,7 @@
       $("ovWinner").style.display = "none";
       $("ovWinnerText").textContent = "";
     }
+
     startOverlayTimer(gameOver ? OVERLAY_GAMEOVER_MS : OVERLAY_MS);
   }
 
@@ -729,7 +372,7 @@
     $("roomPill").textContent = `sala: ${s.room_id || "-"}`;
     $("turnPill").textContent = s.turn_player_name ? `vez: ${s.turn_player_name}` : "vez: -";
 
-    // ✅ painel meta
+    // painel meta
     setPanelMeta(s);
 
     $("start").disabled = !(s.phase === "lobby" && isHost());
@@ -767,6 +410,249 @@
     }
 
     if (s.phase === "hands") {
+      // é sua vez?
+      if (s.turn_player_id === me.player_id && !me.hand_submitted) {
+        const maxHand = clamp(me.balls_left ?? 0, 0, 3);
+        $("hand").max = String(maxHand);
+        $("hand").value = String(clamp(parseInt($("hand").value || "0", 10), 0, maxHand));
+        renderHandQuick(maxHand);
+        showBoxes({ hand: true });
+        return;
+      }
+
       if (me.hand_submitted) {
         showBoxes({ waiting: true });
-        $("waitingText").textContent = `Você já enviou sua mão. Aguardando... (V
+        $("waitingText").textContent = "Você já enviou sua mão. Aguardando os demais...";
+        return;
+      }
+
+      showBoxes({ waiting: true });
+      $("waitingText").textContent = `Aguardando sua vez na fase HANDS...`;
+      return;
+    }
+
+    if (s.phase === "guesses") {
+      if (s.turn_player_id === me.player_id && !me.guess_submitted) {
+        const mg = s.max_guess ?? 30;
+        $("guess").min = "0";
+        $("guess").max = String(mg);
+        $("guess").value = String(clamp(parseInt($("guess").value || "0", 10), 0, mg));
+        showBoxes({ guess: true });
+        return;
+      }
+
+      if (me.guess_submitted) {
+        showBoxes({ waiting: true });
+        $("waitingText").textContent = "Você já enviou seu palpite. Aguardando os demais...";
+        return;
+      }
+
+      showBoxes({ waiting: true });
+      $("waitingText").textContent = "Aguardando sua vez na fase GUESSES...";
+      return;
+    }
+
+    if (s.phase === "reveal") {
+      showBoxes({ waiting: true });
+      $("waitingText").textContent = "Revelando...";
+      return;
+    }
+
+    if (s.phase === "over") {
+      showBoxes({ waiting: true });
+      $("waitingText").textContent = "Partida encerrada. O host pode reiniciar.";
+      return;
+    }
+
+    showBoxes({ waiting: true });
+    $("waitingText").textContent = "Aguardando...";
+  }
+
+  // ===== WS =====
+  function wsUrl(room, name, key){
+    const proto = (location.protocol === "https:") ? "wss" : "ws";
+    const base = `${proto}://${location.host}`;
+    const qs = new URLSearchParams();
+    qs.set("name", name);
+    if (key) qs.set("key", key);
+    return `${base}/ws/${encodeURIComponent(room)}?${qs.toString()}`;
+  }
+
+  function startPing(){
+    stopPing();
+    pingTimer = setInterval(() => {
+      if (ws && ws.readyState === 1) send("ping", {});
+    }, 20000);
+  }
+  function stopPing(){
+    if (pingTimer) clearInterval(pingTimer);
+    pingTimer = null;
+  }
+
+  function stopReconnect(){
+    if (reconnectTimer) clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+
+  function scheduleReconnect(){
+    stopReconnect();
+    if (manualClose) return;
+
+    reconnectAttempts += 1;
+    const waitMs = Math.min(12000, 800 + reconnectAttempts * 900);
+
+    setHint(`Reconectando em ${Math.ceil(waitMs/1000)}s... (tentativa ${reconnectAttempts})`);
+    reconnectTimer = setTimeout(() => {
+      connect();
+    }, waitMs);
+  }
+
+  function send(type, payload){
+    if (!ws || ws.readyState !== 1) return;
+    ws.send(JSON.stringify({ type, ...payload }));
+  }
+
+  function closeWs(){
+    manualClose = true;
+    stopPing();
+    stopReconnect();
+    try { ws && ws.close(); } catch {}
+    ws = null;
+    setConnected(false);
+  }
+
+  function connect(){
+    setError("");
+    const name = ($("name").value || "").trim() || "Jogador";
+    const room = currentRoom();
+    if (!room) { setError("Informe a sala."); return; }
+
+    manualClose = false;
+
+    const savedKey = localStorage.getItem(roomKeyStorageKey(room)) || "";
+    const url = wsUrl(room, name, savedKey);
+
+    try {
+      ws = new WebSocket(url);
+    } catch (e) {
+      setError("Falha ao abrir WebSocket.");
+      return;
+    }
+
+    ws.onopen = () => {
+      setConnected(true);
+      setHint("Conectado.");
+      reconnectAttempts = 0;
+      startPing();
+    };
+
+    ws.onmessage = (ev) => {
+      let msg = null;
+      try { msg = JSON.parse(ev.data); } catch { return; }
+
+      if (msg.type === "joined") {
+        playerId = msg.player_id;
+        $("room").value = msg.room_id || room;
+        $("roomPill").textContent = `sala: ${msg.room_id || room}`;
+
+        if (msg.player_key) {
+          localStorage.setItem(roomKeyStorageKey(room), msg.player_key);
+        }
+        return;
+      }
+
+      if (msg.type === "state") {
+        renderState(msg.state);
+        return;
+      }
+
+      if (msg.type === "reveal") {
+        // salva histórico + desenha painel
+        pushRevealToHistory(msg);
+
+        // overlay
+        showOverlay(msg.result, msg.game_over || null);
+        return;
+      }
+
+      if (msg.type === "kicked") {
+        setError(msg.message || "Você foi removido da sala.");
+        closeWs();
+        return;
+      }
+
+      if (msg.type === "pong") return;
+    };
+
+    ws.onclose = () => {
+      stopPing();
+      setConnected(false);
+      if (!manualClose) scheduleReconnect();
+    };
+
+    ws.onerror = () => {
+      setConnected(false);
+      // onclose vai cuidar da reconexão
+    };
+  }
+
+  // ===== API / botões =====
+  $("create").onclick = async () => {
+    setError("");
+    setHint("Criando sala...");
+
+    try {
+      const resp = await fetch("/api/create-room", { method: "GET" });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data = await resp.json();
+      if (!data.room_id) throw new Error("room_id ausente");
+
+      $("room").value = String(data.room_id).toUpperCase();
+      setHint(`Sala criada: ${$("room").value}`);
+    } catch (e) {
+      setError("Falha ao criar sala. Veja o Console/Network para detalhes.");
+      setHint("");
+    }
+  };
+
+  $("connect").onclick = () => connect();
+
+  $("copyLink").onclick = async () => {
+    const room = currentRoom();
+    if (!room) { setError("Informe a sala para copiar o link."); return; }
+    const url = `${location.origin}/?room=${encodeURIComponent(room)}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setHint("Link copiado!");
+    } catch {
+      setHint(url);
+    }
+  };
+
+  $("start").onclick = () => send("start", {});
+  $("restart").onclick = () => send("restart", {});
+  $("skip").onclick = () => send("skip", {});
+
+  $("sendHand").onclick = () => {
+    const v = clamp(parseInt($("hand").value || "0", 10), 0, 3);
+    send("hand", { value: v });
+    $("handAck").textContent = "Enviado ✅";
+  };
+
+  $("sendGuess").onclick = () => {
+    const v = parseInt($("guess").value || "0", 10);
+    send("guess", { value: v });
+    $("guessAck").textContent = "Enviado ✅";
+  };
+
+  // ===== boot: preencher room via querystring =====
+  (function init(){
+    setConnected(false);
+    renderHistory();
+    drawRoundChart();
+
+    const qs = new URLSearchParams(location.search);
+    const r = (qs.get("room") || "").trim().toUpperCase();
+    if (r) $("room").value = r;
+  })();
+</script>
