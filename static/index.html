@@ -81,6 +81,7 @@
     .hint{ color: var(--muted); margin: 8px 0 0; font-size: 13px; }
     .sep{ height:1px; background: rgba(255,255,255,0.10); margin: 12px 0; }
 
+    /* Ordem da rodada */
     .orderBar{
       display:flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; align-items:center;
     }
@@ -96,7 +97,10 @@
       align-items:center;
       white-space: nowrap;
     }
-    .chip .miniDot{ width: 8px; height: 8px; border-radius: 999px; background: rgba(255,255,255,0.25); }
+    .chip .miniDot{
+      width: 8px; height: 8px; border-radius: 999px;
+      background: rgba(255,255,255,0.25);
+    }
     .chip.turn{
       background: rgba(245,158,11,0.18);
       border-color: rgba(245,158,11,0.30);
@@ -104,6 +108,7 @@
     }
     .chip.turn .miniDot{ background: var(--warn); }
 
+    /* Players grid */
     .playersGrid{ display:grid; gap: 10px; }
     .playerRow{
       display:grid;
@@ -116,6 +121,7 @@
       border-radius: 14px;
       transition: transform .10s ease, border-color .10s ease, background .10s ease;
     }
+    /* Destaque do jogador da vez */
     .playerRow.turnPlayer{
       border-color: rgba(245,158,11,0.35);
       background: rgba(245,158,11,0.10);
@@ -155,11 +161,12 @@
     }
     .barFill{ height: 100%; width: 0%; background: rgba(255,255,255,0.85); transition: width .35s ease; }
 
+    /* Ações */
     .actionsBox p{ margin: 8px 0; color: var(--muted); }
     .quick{ display:flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
     .quick button{ font-size: 13px; padding: 8px 10px; border-radius: 999px; }
 
-    /* botão kick */
+    /* botão kick (host) */
     .kickBtn{
       font-size: 12px;
       padding: 6px 10px;
@@ -217,9 +224,182 @@
     }
     .ovTimerText{ color: var(--muted); font-size: 13px; }
 
+    /* ===== PAINEL DA PARTIDA (Timeline + Heat) ===== */
+    .tabs{ display:flex; gap: 10px; flex-wrap: wrap; align-items:center; margin-top: 6px; }
+    .tabBtn{
+      padding: 8px 10px;
+      border-radius: 999px;
+      font-size: 13px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.07);
+      color: rgba(255,255,255,0.86);
+      cursor: pointer;
+    }
+    .tabBtn.active{
+      background: rgba(255,255,255,0.12);
+      border-color: rgba(255,255,255,0.20);
+    }
+
+    .timelineWrap{ margin-top: 12px; overflow-x: auto; padding-bottom: 6px; }
+    .timeline{ display:flex; gap: 12px; min-height: 240px; }
+    .roundCard{
+      width: 340px;
+      flex: 0 0 auto;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.06);
+      padding: 12px;
+      position: relative;
+      overflow: hidden;
+    }
+    .roundCard::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background: radial-gradient(700px 120px at 20% 20%, rgba(59,130,246,0.18), transparent 60%),
+                  radial-gradient(700px 120px at 90% 30%, rgba(245,158,11,0.16), transparent 60%);
+      opacity: .8;
+      pointer-events:none;
+    }
+    .roundHead{
+      position: relative;
+      display:flex;
+      gap: 10px;
+      align-items: start;
+      justify-content: space-between;
+    }
+    .roundTitle{ font-weight: 800; letter-spacing: .2px; }
+    .roundMeta{ color: var(--muted); font-size: 12px; margin-top: 2px; }
+    .badge{
+      position: relative;
+      display:inline-flex;
+      align-items:center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(0,0,0,0.20);
+      color: rgba(255,255,255,0.90);
+      white-space: nowrap;
+    }
+    .badge.good{ border-color: rgba(34,197,94,0.25); background: rgba(34,197,94,0.12); }
+    .badge.none{ border-color: rgba(148,163,184,0.18); background: rgba(148,163,184,0.10); }
+
+    .stackBar{
+      position: relative;
+      margin-top: 10px;
+      height: 16px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.10);
+      overflow: hidden;
+      box-shadow: inset 0 6px 16px rgba(0,0,0,0.20);
+    }
+    .seg{ height: 100%; width: 0%; float: left; transition: width .5s ease; }
+    .stackLabel{
+      position: relative;
+      margin-top: 6px;
+      display:flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items:center;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .legendItem{ display:inline-flex; align-items:center; gap: 6px; white-space: nowrap; }
+    .swatch{
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.40);
+      border: 1px solid rgba(255,255,255,0.20);
+    }
+
+    .guessesRow{
+      position: relative;
+      margin-top: 10px;
+      display:flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items:center;
+    }
+    .gChip{
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(0,0,0,0.18);
+      font-size: 12px;
+      color: rgba(255,255,255,0.90);
+      display:inline-flex;
+      align-items:center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+    .gChip.correct{
+      border-color: rgba(34,197,94,0.35);
+      background: rgba(34,197,94,0.14);
+      box-shadow: 0 0 0 3px rgba(34,197,94,0.10);
+    }
+
+    .snapRow{ position: relative; margin-top: 10px; display:grid; gap: 6px; }
+    .snapLine{
+      display:flex;
+      align-items:center;
+      justify-content: space-between;
+      gap: 10px;
+      color: rgba(255,255,255,0.86);
+      font-size: 12px;
+    }
+    .snapName{
+      max-width: 160px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: rgba(255,255,255,0.86);
+    }
+    .miniBalls{ display:inline-flex; gap: 4px; align-items:center; }
+    .miniBall{
+      width: 9px; height: 9px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.45);
+      background: transparent;
+    }
+    .miniBall.on{ background: rgba(255,255,255,0.92); }
+
+    .heatWrap{
+      margin-top: 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.10);
+      background: rgba(0,0,0,0.18);
+      overflow: hidden;
+    }
+    #heatCanvas{ width: 100%; height: 320px; display:block; }
+    .legend{
+      display:flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items:center;
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 10px;
+    }
+    .legendBar{
+      width: 180px; height: 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.10);
+      background: linear-gradient(90deg,
+        rgba(34,197,94,0.90),
+        rgba(245,158,11,0.90),
+        rgba(239,68,68,0.90)
+      );
+    }
+
     @media (max-width: 680px){
       input{ min-width: 160px; width: 100%; }
       .barWrap{ width: 140px; }
+      #heatCanvas{ height: 280px; }
+      .roundCard{ width: 300px; }
     }
   </style>
 </head>
@@ -228,7 +408,7 @@
   <div class="wrap">
     <h1>🎱 Jogo das Bolinhas (Online)</h1>
     <p class="subtitle">
-      Agora com reconexão automática + keepalive + host pode expulsar 👀 <span style="opacity:.7;">(build: 2026-02-23)</span>
+      Reconexão + keepalive + host expulsa + painel no final ✅
     </p>
 
     <div class="card">
@@ -298,38 +478,44 @@
       </div>
     </div>
 
-    <!-- PAINEL DA PARTIDA -->
-    <div class="card">
-      <h3 style="margin:0 0 8px;">Painel da Partida</h3>
-      <p class="subtitle" style="margin:0 0 12px;">
-        Histórico das rodadas + gráfico do total de bolinhas. (Enquanto a página estiver aberta.)
-      </p>
-
-      <div class="row" style="align-items:center;">
-        <span class="pill" id="panelPhase">fase: -</span>
-        <span class="pill" id="panelRound">rodada: -</span>
-        <span class="pill" id="panelTurn">vez: -</span>
-        <button id="clearHistory">Limpar histórico</button>
-      </div>
-
-      <div style="margin-top:12px;">
-        <canvas id="roundChart" width="980" height="220" style="
-          width: 100%;
-          max-width: 100%;
-          background: rgba(255,255,255,0.04);
-          border: 1px solid rgba(255,255,255,0.10);
-          border-radius: 14px;
-        "></canvas>
-      </div>
-
-      <div class="sep"></div>
-
-      <div id="roundHistory" style="display:grid; gap:10px;"></div>
-    </div>
-
     <div class="card">
       <h3 style="margin:0 0 8px;">Jogadores</h3>
       <div id="players" class="playersGrid"></div>
+    </div>
+
+    <!-- ✅ PAINEL DA PARTIDA NO FINAL (depois dos Jogadores) -->
+    <div class="card">
+      <div class="row" style="align-items:center; justify-content: space-between;">
+        <div>
+          <h3 style="margin:0 0 6px;">Painel da Partida</h3>
+          <p class="subtitle" style="margin:0;">Timeline e mapa (heat).</p>
+        </div>
+        <div class="tabs">
+          <button class="tabBtn active" id="tabTimeline">Timeline</button>
+          <button class="tabBtn" id="tabHeat">Mapa</button>
+        </div>
+      </div>
+
+      <div id="timelineMode">
+        <div class="timelineWrap">
+          <div class="timeline" id="timeline"></div>
+        </div>
+        <p class="subtitle" style="margin-top:8px;">
+          Cada card é uma rodada: mãos, palpites e bolinhas após.
+        </p>
+      </div>
+
+      <div id="heatMode" style="display:none;">
+        <div class="heatWrap">
+          <canvas id="heatCanvas"></canvas>
+        </div>
+        <div class="legend">
+          <span>0 bolinhas</span>
+          <div class="legendBar"></div>
+          <span>3 bolinhas</span>
+          <span class="subtitle" style="margin:0;">(verde = perto de sair, vermelho = longe)</span>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -380,155 +566,6 @@
   let overlayTimeout = null;
   let overlayInterval = null;
 
-  // =====================
-  // Painel da Partida
-  // =====================
-  const matchHistory = []; // [{ round_num, total, winner, hands, guesses, game_over }]
-  const MAX_HISTORY = 50;
-
-  function setPanelMeta(s){
-    $("panelPhase").textContent = `fase: ${s.phase ?? "-"}`;
-    $("panelRound").textContent = `rodada: ${s.round_num ?? "-"}`;
-    $("panelTurn").textContent = s.turn_player_name ? `vez: ${s.turn_player_name}` : "vez: -";
-  }
-
-  function pushRevealToHistory(revealMsg){
-    if (!revealMsg || !revealMsg.result) return;
-    const r = revealMsg.result;
-
-    matchHistory.push({
-      round_num: r.round_num,
-      total: r.total,
-      winner: r.winner || null,
-      hands: r.hands || {},
-      guesses: r.guesses || {},
-      game_over: revealMsg.game_over || null
-    });
-
-    while (matchHistory.length > MAX_HISTORY) matchHistory.shift();
-
-    renderHistory();
-    drawRoundChart();
-  }
-
-  function renderHistory(){
-    const box = $("roundHistory");
-    box.innerHTML = "";
-
-    if (!matchHistory.length){
-      box.innerHTML = `<p class="subtitle" style="margin:0;">Sem rodadas ainda. Assim que rolar uma revelação, aparece aqui.</p>`;
-      return;
-    }
-
-    const reversed = [...matchHistory].reverse();
-
-    for (const item of reversed){
-      const card = document.createElement("div");
-      card.style.cssText = `
-        border: 1px solid rgba(255,255,255,0.10);
-        background: rgba(255,255,255,0.05);
-        border-radius: 14px;
-        padding: 12px;
-      `;
-
-      const winnerLine = item.winner
-        ? `🏆 <b>${item.winner}</b> acertou e perdeu 1 bolinha.`
-        : `Ninguém acertou nesta rodada.`;
-
-      const go = item.game_over
-        ? `<div style="margin-top:8px; color: rgba(255,255,255,0.90);">
-             🧨 <b>Fim de jogo</b> — Perdedor: <b>${item.game_over.loser ?? "?"}</b>
-           </div>`
-        : "";
-
-      const handsTxt = Object.entries(item.hands).map(([n,v]) => `${n}: ${v}`).join(" • ") || "-";
-      const guessesTxt = Object.entries(item.guesses).map(([n,v]) => `${n}: ${v}`).join(" • ") || "-";
-
-      card.innerHTML = `
-        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-          <span class="pill">Rodada <b>${item.round_num}</b></span>
-          <span class="pill">Total: <b>${item.total}</b></span>
-          <span class="pill">${winnerLine}</span>
-        </div>
-        <div class="subtitle" style="margin-top:10px;">
-          <b>Mãos:</b> ${handsTxt}
-        </div>
-        <div class="subtitle" style="margin-top:6px;">
-          <b>Palpites:</b> ${guessesTxt}
-        </div>
-        ${go}
-      `;
-
-      box.appendChild(card);
-    }
-  }
-
-  function drawRoundChart(){
-    const c = $("roundChart");
-    const ctx = c.getContext("2d");
-    const W = c.width;
-    const H = c.height;
-
-    ctx.clearRect(0,0,W,H);
-
-    ctx.fillStyle = "rgba(255,255,255,0.02)";
-    ctx.fillRect(0,0,W,H);
-
-    if (!matchHistory.length){
-      ctx.fillStyle = "rgba(255,255,255,0.65)";
-      ctx.font = "16px system-ui";
-      ctx.fillText("Sem dados ainda (aguardando rodadas)...", 18, 40);
-      return;
-    }
-
-    const data = matchHistory.slice(-12); // últimas 12
-    const maxVal = Math.max(...data.map(x => x.total), 1);
-
-    const pad = 22;
-    const chartW = W - pad*2;
-    const chartH = H - pad*2 - 18;
-
-    ctx.strokeStyle = "rgba(255,255,255,0.15)";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(pad, pad);
-    ctx.lineTo(pad, pad + chartH);
-    ctx.lineTo(pad + chartW, pad + chartH);
-    ctx.stroke();
-
-    const n = data.length;
-    const gap = 10;
-    const barW = Math.max(18, Math.floor((chartW - gap*(n-1)) / n));
-
-    for (let i=0; i<n; i++){
-      const item = data[i];
-      const frac = item.total / maxVal;
-      const bh = Math.floor(chartH * frac);
-      const x = pad + i*(barW + gap);
-      const y = pad + chartH - bh;
-
-      ctx.fillStyle = "rgba(255,255,255,0.82)";
-      ctx.fillRect(x, y, barW, bh);
-
-      ctx.fillStyle = "rgba(255,255,255,0.65)";
-      ctx.font = "12px system-ui";
-      ctx.fillText(String(item.round_num), x + 4, pad + chartH + 14);
-
-      ctx.fillStyle = "rgba(255,255,255,0.85)";
-      ctx.fillText(String(item.total), x + 4, y - 6);
-    }
-
-    ctx.fillStyle = "rgba(255,255,255,0.85)";
-    ctx.font = "14px system-ui";
-    ctx.fillText("Total de bolinhas por rodada (últimas 12)", pad, 18);
-  }
-
-  $("clearHistory").onclick = () => {
-    matchHistory.length = 0;
-    renderHistory();
-    drawRoundChart();
-  };
-
   // ===== util =====
   function setError(msg = "") { $("err").textContent = msg; }
   function setHint(msg = "") { $("hint").textContent = msg; }
@@ -549,19 +586,18 @@
 
   function you() {
     if (!state || !playerId) return null;
-    return state.players.find(p => p.player_id === playerId) || null;
+    return (state.players || []).find(p => p.player_id === playerId) || null;
   }
   function isHost() { return state && playerId && state.host_player_id === playerId; }
   function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
 
-  // ===== overlay timer =====
+  // ===== overlay =====
   function stopOverlayTimers(){
     if (overlayTimeout) clearTimeout(overlayTimeout);
     if (overlayInterval) clearInterval(overlayInterval);
     overlayTimeout = null;
     overlayInterval = null;
   }
-
   function startOverlayTimer(durationMs){
     stopOverlayTimers();
 
@@ -594,7 +630,7 @@
     $("overlay").classList.add("show");
     $("ovTitle").textContent = `Revelação — Rodada ${result.round_num}`;
     $("ovMeta").textContent = gameOver
-      ? `Fim de jogo! Perdedor: ${gameOver.loser ?? "Empate raro"}`
+      ? `Fim de jogo! Perdedor: ${gameOver.loser ?? "?"}`
       : "Resultado da rodada.";
     $("ovTotal").textContent = String(result.total);
 
@@ -612,12 +648,13 @@
   $("closeOverlay").onclick = () => { $("overlay").classList.remove("show"); stopOverlayTimers(); };
   $("overlay").onclick = (e) => { if (e.target === $("overlay")) { $("overlay").classList.remove("show"); stopOverlayTimers(); } };
 
-  // ===== UI =====
+  // ===== UI render =====
   function renderOrderBar(s) {
     const bar = $("orderBar");
     bar.innerHTML = "";
 
-    if (!s.round_order || !s.round_order.length || s.phase === "lobby") {
+    const order = s.round_order || [];
+    if (!order.length || s.phase === "lobby") {
       const c = document.createElement("div");
       c.className = "chip";
       c.innerHTML = `<span class="miniDot"></span><span>Ordem: (ainda não começou)</span>`;
@@ -625,7 +662,7 @@
       return;
     }
 
-    s.round_order.forEach((pl, idx) => {
+    order.forEach((pl, idx) => {
       const chip = document.createElement("div");
       chip.className = "chip" + (pl.player_id === s.turn_player_id ? " turn" : "");
       chip.innerHTML = `<span class="miniDot"></span><span>${idx+1}. ${pl.name}</span>`;
@@ -648,29 +685,29 @@
     const list = $("players");
     list.innerHTML = "";
 
-    s.players.forEach(p => {
+    (s.players || []).forEach(p => {
       const row = document.createElement("div");
       row.className = "playerRow";
 
       const isTurn = (p.player_id === s.turn_player_id);
       if (isTurn) row.classList.add("turnPlayer");
 
-      const pct = clamp((p.balls_left / 3) * 100, 0, 100);
+      const pct = clamp(((p.balls_left ?? 0) / 3) * 100, 0, 100);
 
       row.innerHTML = `
         <div>
           <div class="nameLine">
             <b class="${isTurn ? "turnName" : ""}"></b>
             ${p.is_host ? `<span class="miniTag host">host</span>` : ""}
-            ${!p.alive ? `<span class="miniTag">fora</span>` : ""}
+            ${p.alive === false ? `<span class="miniTag">fora</span>` : ""}
             ${(s.phase !== "lobby")
-              ? `<span class="miniTag ${p.hand_submitted ? "ok" : "wait"}">mão ${p.hand_submitted ? "✅" : "⏳"}</span>` : ""}
+              ? `<span class="miniTag ${(p.hand_submitted ? "ok" : "wait")}">mão ${(p.hand_submitted ? "✅" : "⏳")}</span>` : ""}
             ${(s.phase === "guesses" || s.phase === "reveal" || s.phase === "over")
-              ? `<span class="miniTag ${p.guess_submitted ? "ok" : "wait"}">palpite ${p.guess_submitted ? "✅" : "⏳"}</span>` : ""}
+              ? `<span class="miniTag ${(p.guess_submitted ? "ok" : "wait")}">palpite ${(p.guess_submitted ? "✅" : "⏳")}</span>` : ""}
             ${isTurn ? `<span class="miniTag host">VEZ</span>` : ""}
           </div>
           <div class="subtitle" style="margin:6px 0 0;">
-            ${p.connected ? "🟢 online" : "⚫ offline"} • estoque: ${p.balls_left}/3
+            ${(p.connected ? "🟢 online" : "⚫ offline")} • estoque: ${(p.balls_left ?? 0)}/3
           </div>
         </div>
         <div class="rightBox"></div>
@@ -679,7 +716,7 @@
       row.querySelector("b").textContent = p.name + (p.player_id === playerId ? " (VOCÊ)" : "");
 
       const rb = row.querySelector(".rightBox");
-      rb.appendChild(ballsHTML(p.balls_left, 3));
+      rb.appendChild(ballsHTML(p.balls_left ?? 0, 3));
 
       const barWrap = document.createElement("div");
       barWrap.className = "barWrap";
@@ -689,6 +726,7 @@
       barWrap.appendChild(barFill);
       rb.appendChild(barWrap);
 
+      // kick (somente host e não em si mesmo)
       if (isHost() && p.player_id !== playerId) {
         const kick = document.createElement("button");
         kick.className = "kickBtn";
@@ -717,27 +755,27 @@
   }
 
   function renderGuessesPublic(s) {
-    $("usedGuesses").textContent = (s.used_guesses || []).join(", ") || "-";
     const gp = s.guesses_public || [];
     if (s.phase === "guesses" && gp.length) {
       $("usedGuesses").textContent = gp.map(x => `${x.name}: ${x.guess}`).join("  •  ");
+      return;
     }
+    $("usedGuesses").textContent = (s.used_guesses || []).join(", ") || "-";
   }
 
   function renderState(s) {
     state = s;
 
-    $("phasePill").textContent = `fase: ${s.phase}`;
-    $("roundPill").textContent = `rodada: ${s.round_num || "-"}`;
-    $("roomPill").textContent = `sala: ${s.room_id || "-"}`;
+    $("phasePill").textContent = `fase: ${s.phase ?? "-"}`;
+    $("roundPill").textContent = `rodada: ${s.round_num ?? "-"}`;
+    $("roomPill").textContent = `sala: ${s.room_id ?? "-"}`;
     $("turnPill").textContent = s.turn_player_name ? `vez: ${s.turn_player_name}` : "vez: -";
 
-    // painel meta
-    setPanelMeta(s);
-
-    $("start").disabled = !(s.phase === "lobby" && isHost());
+    $("start").disabled = !((s.phase === "lobby") && isHost());
     $("restart").disabled = !isHost();
-    $("skip").disabled = !(isHost() && (s.phase === "hands" || s.phase === "guesses"));
+    $("skip").disabled = !(
+      isHost() && (s.phase === "hands" || s.phase === "guesses")
+    );
 
     $("maxGuess").textContent = (s.max_guess ?? "-");
 
@@ -749,13 +787,16 @@
     $("handAck").textContent = "";
     $("guessAck").textContent = "";
 
+    // Painel: sempre alimenta com state (pra capturar balls_after após reveal)
+    panelOnState(s);
+
     if (!me) {
       showBoxes({ waiting: true });
       $("waitingText").textContent = "Você ainda não foi reconhecido na sala.";
       return;
     }
 
-    if (!me.alive && s.phase !== "lobby") {
+    if (me.alive === false && s.phase !== "lobby") {
       showBoxes({ waiting: true });
       $("waitingText").textContent = "Você está fora do jogo. Agora é espectador. 🍿";
       return;
@@ -770,7 +811,13 @@
     }
 
     if (s.phase === "hands") {
-      if (s.turn_player_id === me.player_id && !me.hand_submitted) {
+      if (me.hand_submitted) {
+        showBoxes({ waiting: true });
+        $("waitingText").textContent = "Você já enviou sua mão. Aguardando os demais...";
+        return;
+      }
+
+      if (s.turn_player_id === me.player_id) {
         const maxHand = clamp(me.balls_left ?? 0, 0, 3);
         $("hand").max = String(maxHand);
         $("hand").value = String(clamp(parseInt($("hand").value || "0", 10), 0, maxHand));
@@ -779,19 +826,19 @@
         return;
       }
 
-      if (me.hand_submitted) {
-        showBoxes({ waiting: true });
-        $("waitingText").textContent = "Você já enviou sua mão. Aguardando os demais...";
-        return;
-      }
-
       showBoxes({ waiting: true });
-      $("waitingText").textContent = "Aguardando sua vez na fase HANDS...";
+      $("waitingText").textContent = `Aguardando... agora é a vez de ${s.turn_player_name || "alguém"}.`;
       return;
     }
 
     if (s.phase === "guesses") {
-      if (s.turn_player_id === me.player_id && !me.guess_submitted) {
+      if (me.guess_submitted) {
+        showBoxes({ waiting: true });
+        $("waitingText").textContent = "Você já enviou seu palpite. Aguardando os demais...";
+        return;
+      }
+
+      if (s.turn_player_id === me.player_id) {
         const mg = s.max_guess ?? 30;
         $("guess").min = "0";
         $("guess").max = String(mg);
@@ -800,14 +847,8 @@
         return;
       }
 
-      if (me.guess_submitted) {
-        showBoxes({ waiting: true });
-        $("waitingText").textContent = "Você já enviou seu palpite. Aguardando os demais...";
-        return;
-      }
-
       showBoxes({ waiting: true });
-      $("waitingText").textContent = "Aguardando sua vez na fase GUESSES...";
+      $("waitingText").textContent = `Aguardando... agora é a vez de ${s.turn_player_name || "alguém"}.`;
       return;
     }
 
@@ -819,7 +860,9 @@
 
     if (s.phase === "over") {
       showBoxes({ waiting: true });
-      $("waitingText").textContent = "Partida encerrada. O host pode reiniciar.";
+      $("waitingText").textContent = isHost()
+        ? "Partida encerrada. Você pode reiniciar."
+        : "Partida encerrada. Aguarde o host reiniciar.";
       return;
     }
 
@@ -827,7 +870,7 @@
     $("waitingText").textContent = "Aguardando...";
   }
 
-  // ===== WS =====
+  // ===== WS / rede =====
   function wsUrl(room, name, key){
     const proto = (location.protocol === "https:") ? "wss" : "ws";
     const base = `${proto}://${location.host}`;
@@ -868,7 +911,7 @@
 
   function send(type, payload){
     if (!ws || ws.readyState !== 1) return;
-    ws.send(JSON.stringify({ type, ...payload }));
+    ws.send(JSON.stringify({ type, ...(payload || {}) }));
   }
 
   function closeWs(){
@@ -911,11 +954,11 @@
 
       if (msg.type === "joined") {
         playerId = msg.player_id;
-        $("room").value = (msg.room_id || room).toUpperCase();
+        $("room").value = String(msg.room_id || room).toUpperCase();
         $("roomPill").textContent = `sala: ${msg.room_id || room}`;
 
         if (msg.player_key) {
-          localStorage.setItem(roomKeyStorageKey(room), msg.player_key);
+          localStorage.setItem(roomKeyStorageKey($("room").value), msg.player_key);
         }
         return;
       }
@@ -926,7 +969,10 @@
       }
 
       if (msg.type === "reveal") {
-        pushRevealToHistory(msg);
+        // painel precisa disso (antes do próximo state)
+        panelOnReveal(msg.result, msg.game_over || null);
+
+        // overlay
         showOverlay(msg.result, msg.game_over || null);
         return;
       }
@@ -951,11 +997,10 @@
     };
   }
 
-  // ===== API / botões =====
+  // ===== botões =====
   $("create").onclick = async () => {
     setError("");
     setHint("Criando sala...");
-
     try {
       const resp = await fetch("/api/create-room", { method: "GET" });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
@@ -996,16 +1041,341 @@
 
   $("sendGuess").onclick = () => {
     const v = parseInt($("guess").value || "0", 10);
+    const used = (state && state.used_guesses) ? state.used_guesses : [];
+    if (Array.isArray(used) && used.includes(v)) {
+      setError("Esse palpite já foi usado. Escolha outro.");
+      return;
+    }
     send("guess", { value: v });
     $("guessAck").textContent = "Enviado ✅";
   };
 
+  // ==========================================================
+  // =============== PAINEL DA PARTIDA (BOTTOM) ===============
+  // ==========================================================
+  const panel_rounds = []; // [{round_num,total,winner,hands,guesses,balls_after,game_over}]
+  const PANEL_MAX = 25;
+  let panel_pendingReveal = null;
+
+  function panelColorForName(name){
+    let h = 0;
+    for (let i=0;i<name.length;i++) h = (h*31 + name.charCodeAt(i)) % 360;
+    return `hsl(${h}, 80%, 65%)`;
+  }
+
+  function panelMiniBalls(ballsLeft, max=3){
+    const wrap = document.createElement("span");
+    wrap.className = "miniBalls";
+    for (let i=0;i<max;i++){
+      const b = document.createElement("span");
+      b.className = "miniBall" + (i < ballsLeft ? " on" : "");
+      wrap.appendChild(b);
+    }
+    return wrap;
+  }
+
+  function panelSetTab(mode){
+    const tl = $("timelineMode");
+    const hm = $("heatMode");
+    const b1 = $("tabTimeline");
+    const b2 = $("tabHeat");
+
+    if (mode === "timeline"){
+      tl.style.display = "block";
+      hm.style.display = "none";
+      b1.classList.add("active");
+      b2.classList.remove("active");
+    } else {
+      tl.style.display = "none";
+      hm.style.display = "block";
+      b2.classList.add("active");
+      b1.classList.remove("active");
+      panelDrawHeat();
+    }
+  }
+
+  function panelInit(){
+    $("tabTimeline").onclick = () => panelSetTab("timeline");
+    $("tabHeat").onclick = () => panelSetTab("heat");
+    panelSetTab("timeline");
+
+    window.addEventListener("resize", () => {
+      if ($("heatMode").style.display !== "none") panelDrawHeat();
+    });
+
+    panelRenderTimeline(); // mostra placeholder
+  }
+
+  function panelOnReveal(result, gameOver){
+    if (!result) return;
+    panel_pendingReveal = { result, gameOver: gameOver || null };
+  }
+
+  function panelOnState(newState){
+    if (!newState) return;
+
+    if (panel_pendingReveal){
+      const { result, gameOver } = panel_pendingReveal;
+
+      const balls_after = {};
+      (newState.players || []).forEach(p => { balls_after[p.name] = p.balls_left; });
+
+      panel_rounds.push({
+        round_num: result.round_num,
+        total: result.total,
+        winner: result.winner || null,
+        hands: result.hands || {},
+        guesses: result.guesses || {},
+        balls_after,
+        game_over: gameOver
+      });
+
+      while (panel_rounds.length > PANEL_MAX) panel_rounds.shift();
+
+      panel_pendingReveal = null;
+
+      panelRenderTimeline();
+      if ($("heatMode").style.display !== "none") panelDrawHeat();
+    }
+  }
+
+  function panelRenderTimeline(){
+    const tl = $("timeline");
+    tl.innerHTML = "";
+
+    if (!panel_rounds.length){
+      const card = document.createElement("div");
+      card.className = "roundCard";
+      card.innerHTML = `
+        <div class="roundHead">
+          <div>
+            <div class="roundTitle">Sem rodadas ainda</div>
+            <div class="roundMeta">Quando sair uma revelação (REVEAL), aparece aqui.</div>
+          </div>
+          <span class="badge none">⏳ aguardando</span>
+        </div>
+      `;
+      tl.appendChild(card);
+      return;
+    }
+
+    for (const r of panel_rounds){
+      const card = document.createElement("div");
+      card.className = "roundCard";
+
+      const winnerBadge = r.winner
+        ? `<span class="badge good">🏆 ${r.winner}</span>`
+        : `<span class="badge none">ninguém acertou</span>`;
+
+      const hands = r.hands || {};
+      const guesses = r.guesses || {};
+      const names = Object.keys(hands);
+
+      const total = Math.max(1, Number(r.total || 0));
+      const segs = names.map(n => {
+        const val = Number(hands[n] ?? 0);
+        const w = (val / total) * 100;
+        const col = panelColorForName(n);
+        return `<div class="seg" style="width:${w}%; background:${col};"></div>`;
+      }).join("");
+
+      const legend = names.map(n => {
+        const val = Number(hands[n] ?? 0);
+        const col = panelColorForName(n);
+        return `<span class="legendItem"><span class="swatch" style="background:${col};"></span>${n}: ${val}</span>`;
+      }).join("");
+
+      const gNames = Object.keys(guesses);
+      const guessChips = gNames.map(n => {
+        const gv = guesses[n];
+        const correct = (r.winner && n === r.winner);
+        return `<span class="gChip ${correct ? "correct" : ""}">${n}: <b>${gv}</b></span>`;
+      }).join("");
+
+      card.innerHTML = `
+        <div class="roundHead">
+          <div>
+            <div class="roundTitle">Rodada ${r.round_num} • Total <b>${r.total}</b></div>
+            <div class="roundMeta">${r.game_over ? `Fim de jogo — Perdedor: ${r.game_over.loser ?? "?"}` : "Resumo da rodada"}</div>
+          </div>
+          ${winnerBadge}
+        </div>
+
+        <div class="stackBar">${segs}</div>
+        <div class="stackLabel">${legend || `<span class="legendItem">-</span>`}</div>
+
+        <div class="guessesRow">
+          ${guessChips || `<span class="gChip">Sem palpites</span>`}
+        </div>
+      `;
+
+      const snapWrap = document.createElement("div");
+      snapWrap.className = "snapRow";
+
+      const ballsAfter = r.balls_after || {};
+      Object.entries(ballsAfter).forEach(([n, b]) => {
+        const line = document.createElement("div");
+        line.className = "snapLine";
+
+        const nm = document.createElement("span");
+        nm.className = "snapName";
+        nm.textContent = n;
+
+        const balls = panelMiniBalls(Number(b) || 0, 3);
+
+        line.appendChild(nm);
+        line.appendChild(balls);
+        snapWrap.appendChild(line);
+      });
+
+      card.appendChild(snapWrap);
+      tl.appendChild(card);
+    }
+
+    // rola pro final (rodada mais recente)
+    tl.parentElement.scrollLeft = tl.parentElement.scrollWidth;
+  }
+
+  function panelColorForBalls(b){
+    // 0 -> verde, 1 -> amarelo, 2 -> laranja, 3 -> vermelho
+    const t = Math.max(0, Math.min(1, (b / 3)));
+    function lerp(a,c,t){ return Math.round(a + (c-a)*t); }
+
+    // verde (34,197,94) -> amarelo (245,158,11) -> vermelho (239,68,68)
+    let r,g,bl;
+    if (t <= 0.5){
+      const k = t/0.5;
+      r = lerp(34, 245, k);
+      g = lerp(197,158, k);
+      bl = lerp(94, 11, k);
+    } else {
+      const k = (t-0.5)/0.5;
+      r = lerp(245,239, k);
+      g = lerp(158, 68, k);
+      bl = lerp(11, 68, k);
+    }
+    return `rgba(${r},${g},${bl},0.90)`;
+  }
+
+  function panelDrawHeat(){
+    const canvas = $("heatCanvas");
+    if (!canvas) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    const cssW = canvas.clientWidth || 900;
+    const cssH = 320;
+
+    canvas.width = Math.floor(cssW * dpr);
+    canvas.height = Math.floor(cssH * dpr);
+
+    const ctx = canvas.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    // players: pega do state atual se existir; senão tenta do último snapshot
+    let players = [];
+    if (state && Array.isArray(state.players) && state.players.length){
+      players = state.players.map(p => p.name);
+    } else if (panel_rounds.length){
+      const last = panel_rounds[panel_rounds.length - 1];
+      players = Object.keys(last.balls_after || {});
+    }
+
+    // rounds (x)
+    const rounds = panel_rounds.slice(-PANEL_MAX);
+    const cols = Math.max(1, rounds.length);
+    const rows = Math.max(1, players.length);
+
+    // layout
+    const padL = 140;  // espaço pros nomes
+    const padT = 14;
+    const padR = 12;
+    const padB = 26;
+
+    const W = cssW;
+    const H = cssH;
+
+    // fundo
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle = "rgba(255,255,255,0.02)";
+    ctx.fillRect(0,0,W,H);
+
+    // título leve
+    ctx.fillStyle = "rgba(255,255,255,0.85)";
+    ctx.font = "14px system-ui";
+    ctx.fillText("Mapa: bolinhas após cada rodada", 14, 18);
+
+    // área grid
+    const gridX = padL;
+    const gridY = padT + 14;
+    const gridW = W - padL - padR;
+    const gridH = H - gridY - padB;
+
+    // borda
+    ctx.strokeStyle = "rgba(255,255,255,0.12)";
+    ctx.strokeRect(gridX, gridY, gridW, gridH);
+
+    const cellW = gridW / cols;
+    const cellH = gridH / rows;
+
+    // labels Y (nomes)
+    ctx.font = "12px system-ui";
+    ctx.fillStyle = "rgba(255,255,255,0.78)";
+    players.forEach((name, i) => {
+      const y = gridY + i*cellH + cellH*0.65;
+      ctx.fillText(name, 14, y);
+    });
+
+    // labels X (rodadas) - algumas
+    ctx.fillStyle = "rgba(255,255,255,0.60)";
+    const step = Math.max(1, Math.floor(cols / 8));
+    for (let c=0; c<cols; c+=step){
+      const rn = rounds[c]?.round_num ?? "";
+      const x = gridX + c*cellW + 2;
+      ctx.fillText(String(rn), x, H - 10);
+    }
+
+    // cells
+    for (let c=0; c<cols; c++){
+      const snap = rounds[c].balls_after || {};
+      for (let r=0; r<rows; r++){
+        const pname = players[r];
+        const b = Number(snap[pname]);
+        const val = Number.isFinite(b) ? b : 3; // se não tem dado, assume 3
+
+        ctx.fillStyle = panelColorForBalls(val);
+        ctx.fillRect(
+          gridX + c*cellW + 1,
+          gridY + r*cellH + 1,
+          cellW - 2,
+          cellH - 2
+        );
+      }
+    }
+
+    // grid linhas leves
+    ctx.strokeStyle = "rgba(255,255,255,0.06)";
+    for (let c=1; c<cols; c++){
+      const x = gridX + c*cellW;
+      ctx.beginPath();
+      ctx.moveTo(x, gridY);
+      ctx.lineTo(x, gridY + gridH);
+      ctx.stroke();
+    }
+    for (let r=1; r<rows; r++){
+      const y = gridY + r*cellH;
+      ctx.beginPath();
+      ctx.moveTo(gridX, y);
+      ctx.lineTo(gridX + gridW, y);
+      ctx.stroke();
+    }
+  }
+
   // ===== boot =====
   (function init(){
     setConnected(false);
-    renderHistory();
-    drawRoundChart();
+    panelInit();
 
+    // preenche sala via query ?room=
     const qs = new URLSearchParams(location.search);
     const r = (qs.get("room") || "").trim().toUpperCase();
     if (r) $("room").value = r;
