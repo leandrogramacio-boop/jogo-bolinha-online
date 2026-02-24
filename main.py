@@ -1,45 +1,34 @@
 from __future__ import annotations
 
-import asyncio
+import os
 import json
-import secrets
-import string
+import uuid
+import random
+import asyncio
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
-
+from typing import Dict, Any, List, Optional
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-# =========================
-# App / Static
-# =========================
-app = FastAPI()
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
+# =========================================================
+# CONFIG
+# =========================================================
+APP_TITLE = "Jogo das Bolinhas (Online)"
+MAX_PLAYERS = 10
+START_BALLS = 3
 
+STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
+INDEX_HTML = os.path.join(STATIC_DIR, "index.html")
 
-@app.get("/")
-def root():
-    return FileResponse("static/index.html")
-
-
-# =========================
-# Game Model
-# =========================
-def _room_id(n: int = 6) -> str:
-    alphabet = string.ascii_uppercase + string.digits
-    return "".join(secrets.choice(alphabet) for _ in range(n))
+app = FastAPI(title=APP_TITLE)
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
-def _player_id() -> str:
-    return secrets.token_hex(6)
-
-
-def _player_key() -> str:
-    return secrets.token_hex(12)
-
-
+# =========================================================
+# MODELOS
+# =========================================================
 @dataclass
 class Player:
     player_id: str
@@ -48,17 +37,12 @@ class Player:
     is_host: bool = False
     connected: bool = True
     alive: bool = True
-    balls_left: int = 3
+    balls_left: int = START_BALLS
 
     hand_submitted: bool = False
     guess_submitted: bool = False
-
-    # valores da rodada (servidor)
     current_hand: Optional[int] = None
     current_guess: Optional[int] = None
-
-    # para “cada um ver a sua mão” (último hand enviado por ele)
-    last_hand_sent: Optional[int] = None
 
 
 @dataclass
@@ -69,44 +53,36 @@ class Room:
     phase: str = "lobby"  # lobby | hands | guesses | reveal | over
     round_num: int = 0
 
+    # turn control
+    round_order: List[Dict[str, Any]] = field(default_factory=list)
+    turn_index: int = 0
     turn_player_id: Optional[str] = None
     turn_player_name: Optional[str] = None
-
-    # round-robin: índice do primeiro jogador da rodada
-    starter_index: int = 0
-
-    # ordem da rodada (snapshot)
-    round_order: List[Dict[str, Any]] = field(default_factory=list)
 
     used_guesses: List[int] = field(default_factory=list)
     max_guess: int = 0
 
     paused: bool = False
+
+    # ✅ prêmio (host define)
     penalty_text: str = ""
 
-    # chat
-    chat_history: List[Dict[str, Any]] = field(default_factory=list)  # [{name,text,ts}]
+    # ✅ chat
+    chat_history: List[Dict[str, Any]] = field(default_factory=list)
 
-    # conexões WS: websocket -> player_id
-    sockets: Dict[WebSocket, str] = field(default_factory=dict)
-
-    # trava leve por sala
-    lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+    # WS connections
+    sockets: Dict[str, WebSocket] = field(default_factory=dict)
 
 
 ROOMS: Dict[str, Room] = {}
 
 
-def _now_ts() -> int:
-    # timestamp simples (segundos)
-    return int(asyncio.get_event_loop().time())
-
-
-def _find_player(room: Room, pid: str) -> Optional[Player]:
-    for p in room.players:
-        if p.player_id == pid:
-            return p
-    return None
+# =========================================================
+# HELPERS
+# =========================================================
+def _make_room_id() -> str:
+    alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+    return "".join(random.choice(alphabet) for _ in range(6))
 
 
 def _host(room: Room) -> Optional[Player]:
@@ -120,115 +96,60 @@ def _alive_players(room: Room) -> List[Player]:
     return [p for p in room.players if p.alive]
 
 
-def _rebuild_round_order(room: Room) -> None:
-    alive = _alive_players(room)
-    if not alive:
-        room.round_order = []
-        return
-
-    # round-robin starter
-    if room.starter_index >= len(alive):
-        room.starter_index = 0
-
-    ordered = alive[room.starter_index :] + alive[: room.starter_index]
-    room.round_order = [{"player_id": p.player_id, "name": p.name} for p in ordered]
-
-
-def _set_turn(room: Room, player_id: Optional[str]) -> None:
-    room.turn_player_id = player_id
-    pl = _find_player(room, player_id) if player_id else None
-    room.turn_player_name = pl.name if pl else None
-
-
-def _next_turn_in_order(room: Room, start_after_pid: Optional[str]) -> Optional[str]:
-    """Given current order, return next alive player's id after start_after_pid, or first if None."""
-    order = room.round_order or []
-    if not order:
-        return None
-    ids = [x["player_id"] for x in order]
-
-    if start_after_pid is None or start_after_pid not in ids:
-        return ids[0]
-
-    i = ids.index(start_after_pid)
-    for j in range(i + 1, len(ids)):
-        pid = ids[j]
-        p = _find_player(room, pid)
-        if p and p.alive:
-            return pid
+def _player_by_id(room: Room, pid: str) -> Optional[Player]:
+    for p in room.players:
+        if p.player_id == pid:
+            return p
     return None
 
 
-def _all_hands_done(room: Room) -> bool:
-    for p in _alive_players(room):
-        if not p.hand_submitted:
-            return False
-    return True
+def _player_by_key(room: Room, key: str) -> Optional[Player]:
+    for p in room.players:
+        if p.key == key:
+            return p
+    return None
 
 
-def _all_guesses_done(room: Room) -> bool:
-    for p in _alive_players(room):
-        if not p.guess_submitted:
-            return False
-    return True
+def _recalc_round_order(room: Room) -> None:
+    alive = _alive_players(room)
+    room.round_order = [{"player_id": p.player_id, "name": p.name} for p in alive]
+
+
+def _set_turn(room: Room) -> None:
+    if not room.round_order:
+        room.turn_player_id = None
+        room.turn_player_name = None
+        return
+
+    room.turn_index %= len(room.round_order)
+    cur = room.round_order[room.turn_index]
+    room.turn_player_id = cur["player_id"]
+    room.turn_player_name = cur["name"]
 
 
 def _compute_max_guess(room: Room) -> int:
-    # max total possível = soma das bolinhas que cada vivo ainda tem (cap 3)
     alive = _alive_players(room)
-    return sum(min(3, max(0, p.balls_left)) for p in alive)
+    return sum(min(START_BALLS, p.balls_left) for p in alive)
 
 
-def _start_round(room: Room) -> None:
-    room.round_num += 1
-    room.used_guesses = []
-    room.max_guess = _compute_max_guess(room)
-
-    # reset flags/rodada
-    for p in room.players:
-        p.hand_submitted = False
-        p.guess_submitted = False
-        p.current_hand = None
-        p.current_guess = None
-
-    room.phase = "hands"
-    _rebuild_round_order(room)
-    _set_turn(room, room.round_order[0]["player_id"] if room.round_order else None)
+def _round_robin_shift(room: Room) -> None:
+    # alterna o primeiro jogador a cada rodada
+    if room.round_order:
+        room.round_order = room.round_order[1:] + room.round_order[:1]
+    room.turn_index = 0
+    _set_turn(room)
 
 
-def _advance_starter(room: Room) -> None:
-    alive = _alive_players(room)
-    if not alive:
-        room.starter_index = 0
-        return
-    room.starter_index = (room.starter_index + 1) % len(alive)
-
-
-def _finish_reveal_and_check_end(room: Room, winner_name: Optional[str]) -> Optional[Dict[str, Any]]:
-    # Quem acerta perde 1 bolinha
-    if winner_name:
-        for p in room.players:
-            if p.alive and p.name == winner_name:
-                p.balls_left = max(0, p.balls_left - 1)
-                if p.balls_left == 0:
-                    p.alive = False
-                break
-
-    alive = _alive_players(room)
-    if len(alive) <= 1:
-        room.phase = "over"
-        # último sobrevivente perde
-        loser = alive[0].name if alive else "?"
-        return {"loser": loser, "penalty": room.penalty_text}
-
-    # próxima rodada
-    _advance_starter(room)
-    _start_round(room)
-    return None
-
-
+# =========================================================
+# STATE + BROADCAST
+# =========================================================
 def _base_state(room: Room) -> Dict[str, Any]:
-    # estado "comum" (o que todo mundo pode ver)
+    # ✅ Palpites públicos "rolando" (sempre no state)
+    guesses_public = []
+    for p in _alive_players(room):
+        if p.guess_submitted and p.current_guess is not None:
+            guesses_public.append({"name": p.name, "guess": int(p.current_guess)})
+
     return {
         "room_id": room.room_id,
         "phase": room.phase,
@@ -238,10 +159,11 @@ def _base_state(room: Room) -> Dict[str, Any]:
         "turn_player_name": room.turn_player_name,
         "round_order": room.round_order,
         "used_guesses": room.used_guesses,
+        "guesses_public": guesses_public,  # ✅ IMPORTANTE
         "max_guess": room.max_guess,
         "paused": room.paused,
         "penalty_text": room.penalty_text,
-        "chat": room.chat_history[-50:],  # últimos 50
+        "chat": room.chat_history[-50:],
         "players": [
             {
                 "player_id": p.player_id,
@@ -259,338 +181,334 @@ def _base_state(room: Room) -> Dict[str, Any]:
 
 
 async def _send(ws: WebSocket, payload: Dict[str, Any]) -> None:
-    await ws.send_text(json.dumps(payload))
+    await ws.send_text(json.dumps(payload, ensure_ascii=False))
+
+
+async def _broadcast(room: Room, payload: Dict[str, Any]) -> None:
+    dead = []
+    for pid, ws in list(room.sockets.items()):
+        try:
+            await _send(ws, payload)
+        except Exception:
+            dead.append(pid)
+    for pid in dead:
+        room.sockets.pop(pid, None)
 
 
 async def _broadcast_state(room: Room) -> None:
-    """Envia state para cada websocket com campo extra: my_last_hand."""
-    base = _base_state(room)
-
-    for ws, pid in list(room.sockets.items()):
-        p = _find_player(room, pid)
-        st = dict(base)
-        st["my_last_hand"] = (p.last_hand_sent if p else None)
-        try:
-            await _send(ws, {"type": "state", "state": st})
-        except Exception:
-            # socket morreu
-            room.sockets.pop(ws, None)
+    await _broadcast(room, {"type": "state", "state": _base_state(room)})
 
 
-async def _broadcast_chat(room: Room, msg: Dict[str, Any]) -> None:
-    # opcional: evento imediato de chat (além do state)
-    for ws in list(room.sockets.keys()):
-        try:
-            await _send(ws, {"type": "chat", "message": msg})
-        except Exception:
-            room.sockets.pop(ws, None)
+# =========================================================
+# GAME FLOW
+# =========================================================
+def _reset_round_flags(room: Room) -> None:
+    for p in room.players:
+        p.hand_submitted = False
+        p.guess_submitted = False
+        p.current_hand = None
+        p.current_guess = None
+    room.used_guesses = []
 
 
-# =========================
-# API
-# =========================
+def _ensure_turn_is_valid(room: Room) -> None:
+    if room.turn_player_id and _player_by_id(room, room.turn_player_id):
+        return
+    _set_turn(room)
+
+
+def _advance_turn(room: Room) -> None:
+    room.turn_index += 1
+    if room.turn_index >= len(room.round_order):
+        room.turn_index = 0
+    _set_turn(room)
+
+
+def _all_hands_submitted(room: Room) -> bool:
+    alive = _alive_players(room)
+    return bool(alive) and all(p.hand_submitted for p in alive)
+
+
+def _all_guesses_submitted(room: Room) -> bool:
+    alive = _alive_players(room)
+    return bool(alive) and all(p.guess_submitted for p in alive)
+
+
+def _start_game(room: Room) -> None:
+    room.phase = "hands"
+    room.round_num = 1
+    _recalc_round_order(room)
+    _round_robin_shift(room)
+    _reset_round_flags(room)
+    room.max_guess = _compute_max_guess(room)
+
+
+def _restart_game(room: Room) -> None:
+    for p in room.players:
+        p.alive = True
+        p.balls_left = START_BALLS
+        p.hand_submitted = False
+        p.guess_submitted = False
+        p.current_hand = None
+        p.current_guess = None
+    room.phase = "lobby"
+    room.round_num = 0
+    room.used_guesses = []
+    room.round_order = []
+    room.turn_index = 0
+    room.turn_player_id = None
+    room.turn_player_name = None
+    room.max_guess = 0
+    room.paused = False
+
+
+def _reveal(room: Room) -> Dict[str, Any]:
+    hands = {}
+    guesses = {}
+
+    alive = _alive_players(room)
+    for p in alive:
+        hands[p.name] = int(p.current_hand or 0)
+        guesses[p.name] = int(p.current_guess or 0)
+
+    total = sum(hands.values())
+
+    winner = None
+    for p in alive:
+        if (p.current_guess is not None) and int(p.current_guess) == total:
+            winner = p
+            break
+
+    if winner:
+        winner.balls_left -= 1
+        if winner.balls_left <= 0:
+            winner.balls_left = 0
+            winner.alive = False
+
+    # game over?
+    alive_after = _alive_players(room)
+    game_over = None
+    if len(alive_after) <= 1 and room.phase != "lobby":
+        room.phase = "over"
+        loser = alive_after[0].name if alive_after else "?"
+        game_over = {"loser": loser, "penalty_text": room.penalty_text}
+
+    result = {
+        "round_num": room.round_num,
+        "total": total,
+        "hands": hands,
+        "guesses": guesses,
+        "winner": (winner.name if winner else None),
+    }
+    return {"result": result, "game_over": game_over}
+
+
+def _next_round(room: Room) -> None:
+    room.round_num += 1
+    room.phase = "hands"
+    _recalc_round_order(room)
+    _round_robin_shift(room)
+    _reset_round_flags(room)
+    room.max_guess = _compute_max_guess(room)
+
+
+# =========================================================
+# ROUTES
+# =========================================================
+@app.get("/")
+async def root():
+    return FileResponse(INDEX_HTML)
+
+
 @app.get("/api/create-room")
-def create_room():
-    rid = _room_id()
+async def api_create_room():
+    rid = _make_room_id()
     ROOMS[rid] = Room(room_id=rid)
     return {"room_id": rid}
 
 
-# =========================
-# WebSocket
-# =========================
+# =========================================================
+# WS
+# =========================================================
 @app.websocket("/ws/{room_id}")
-async def ws_room(websocket: WebSocket, room_id: str, name: str = "Jogador", key: str = ""):
+async def ws_room(ws: WebSocket, room_id: str, name: str = "Jogador", key: str = ""):
+    await ws.accept()
     room_id = (room_id or "").strip().upper()
-    name = (name or "Jogador").strip()
+    name = (name or "Jogador").strip()[:24]
 
     if room_id not in ROOMS:
-        # cria sob demanda (opcional)
         ROOMS[room_id] = Room(room_id=room_id)
-
     room = ROOMS[room_id]
 
-    await websocket.accept()
-
-    async with room.lock:
-        # reconexão por key
-        player = None
-        if key:
-            for p in room.players:
-                if p.key == key:
-                    player = p
-                    break
-
+    # reconexão por key
+    player: Optional[Player] = None
+    if key:
+        player = _player_by_key(room, key)
         if player:
             player.connected = True
-            player.name = name or player.name
-        else:
-            pid = _player_id()
-            pkey = _player_key()
-            player = Player(player_id=pid, name=name, key=pkey, is_host=False)
-            room.players.append(player)
+            player.name = name
 
-            # se é o primeiro, vira host
-            if len(room.players) == 1:
-                player.is_host = True
+    if not player:
+        if len(room.players) >= MAX_PLAYERS:
+            await _send(ws, {"type": "error", "message": "Sala cheia."})
+            await ws.close()
+            return
 
-        # registra socket
-        room.sockets[websocket] = player.player_id
+        pid = uuid.uuid4().hex[:10]
+        pkey = uuid.uuid4().hex
+        player = Player(player_id=pid, name=name, key=pkey)
+        if not _host(room):
+            player.is_host = True
+        room.players.append(player)
 
-        # joined
-        await _send(
-            websocket,
-            {"type": "joined", "player_id": player.player_id, "room_id": room.room_id, "player_key": player.key},
-        )
+    room.sockets[player.player_id] = ws
 
-        # manda state inicial
-        await _broadcast_state(room)
+    await _send(ws, {"type": "joined", "player_id": player.player_id, "room_id": room.room_id, "player_key": player.key})
+    await _broadcast_state(room)
 
     try:
         while True:
-            raw = await websocket.receive_text()
-            try:
-                msg = json.loads(raw)
-            except Exception:
+            raw = await ws.receive_text()
+            msg = json.loads(raw)
+            mtype = msg.get("type")
+
+            if mtype == "ping":
+                await _send(ws, {"type": "pong"})
                 continue
 
-            mtype = msg.get("type")
-            async with room.lock:
-                pid = room.sockets.get(websocket)
-                me = _find_player(room, pid) if pid else None
-                if not me:
-                    continue
+            # pausa bloqueia ações do jogo (mas deixa chat/penalty)
+            if room.paused and mtype in ("start", "hand", "guess", "skip", "restart"):
+                await _send(ws, {"type": "error", "message": "Jogo pausado pelo host."})
+                continue
 
-                # ============ keepalive ============
-                if mtype == "ping":
-                    await _send(websocket, {"type": "pong"})
+            if mtype == "start":
+                if not player.is_host:
+                    await _send(ws, {"type": "error", "message": "Somente host pode iniciar."})
                     continue
-
-                # ============ chat ============
-                if mtype == "chat":
-                    text = str(msg.get("text", "")).strip()
-                    if text:
-                        item = {"name": me.name, "text": text[:400], "ts": _now_ts()}
-                        room.chat_history.append(item)
-                        # evento imediato (e depois state)
-                        await _broadcast_chat(room, item)
-                        await _broadcast_state(room)
+                if room.phase != "lobby":
                     continue
-
-                # ============ host-only ============
-                if mtype in ("start", "restart", "skip", "kick", "pause", "set_penalty") and not me.is_host:
-                    await _send(websocket, {"type": "error", "message": "Apenas o host pode fazer isso."})
+                if len(_alive_players(room)) < 2:
+                    await _send(ws, {"type": "error", "message": "Precisa de pelo menos 2 jogadores."})
                     continue
+                _start_game(room)
+                await _broadcast_state(room)
+                continue
 
-                # ============ pause ============
-                if mtype == "pause":
-                    # alterna pause
-                    room.paused = not room.paused
-                    await _broadcast_state(room)
+            if mtype == "restart":
+                if not player.is_host:
+                    await _send(ws, {"type": "error", "message": "Somente host pode reiniciar."})
                     continue
+                _restart_game(room)
+                await _broadcast_state(room)
+                continue
 
-                # bloqueia ações de jogo quando pausado (mas permite set_penalty, chat e restart)
-                if room.paused and mtype in ("start", "hand", "guess", "skip"):
-                    await _send(websocket, {"type": "error", "message": "Jogo está pausado."})
+            if mtype == "skip":
+                if not player.is_host:
+                    await _send(ws, {"type": "error", "message": "Somente host pode pular vez."})
                     continue
-
-                # ============ penalty ============
-                if mtype == "set_penalty":
-                    room.penalty_text = str(msg.get("text", "")).strip()[:120]
-                    await _broadcast_state(room)
+                if room.phase not in ("hands", "guesses"):
                     continue
+                _advance_turn(room)
+                await _broadcast_state(room)
+                continue
 
-                # ============ kick ============
-                if mtype == "kick":
-                    target = str(msg.get("target_id", ""))
-                    tp = _find_player(room, target)
-                    if tp and tp.player_id != me.player_id:
-                        # derruba conexões do alvo
-                        for ws2, pid2 in list(room.sockets.items()):
-                            if pid2 == tp.player_id:
-                                try:
-                                    await _send(ws2, {"type": "kicked", "message": "Você foi removido pelo host."})
-                                except Exception:
-                                    pass
-                                try:
-                                    await ws2.close()
-                                except Exception:
-                                    pass
-                                room.sockets.pop(ws2, None)
-                        tp.connected = False
-                        # opcional: remove do jogo
-                        tp.alive = False
-                        await _broadcast_state(room)
+            if mtype == "pause":
+                if not player.is_host:
+                    await _send(ws, {"type": "error", "message": "Somente host pode pausar."})
                     continue
+                room.paused = True
+                await _broadcast_state(room)
+                continue
 
-                # ============ start/restart ============
-                if mtype == "start":
-                    if room.phase != "lobby":
-                        continue
-                    if len(_alive_players(room)) < 2:
-                        await _send(websocket, {"type": "error", "message": "Precisa de pelo menos 2 jogadores."})
-                        continue
-                    _start_round(room)
-                    await _broadcast_state(room)
+            if mtype == "resume":
+                if not player.is_host:
+                    await _send(ws, {"type": "error", "message": "Somente host pode retomar."})
                     continue
+                room.paused = False
+                await _broadcast_state(room)
+                continue
 
-                if mtype == "restart":
-                    # reset geral, mantém players
-                    room.phase = "lobby"
-                    room.round_num = 0
-                    room.starter_index = 0
-                    room.round_order = []
+            if mtype == "set_penalty":
+                if not player.is_host:
+                    await _send(ws, {"type": "error", "message": "Somente host pode definir prêmio."})
+                    continue
+                txt = (msg.get("value") or "").strip()
+                room.penalty_text = txt[:80]
+                await _broadcast_state(room)
+                continue
+
+            if mtype == "chat":
+                txt = (msg.get("text") or "").strip()
+                if not txt:
+                    continue
+                room.chat_history.append({"name": player.name, "text": txt[:220]})
+                await _broadcast_state(room)
+                continue
+
+            if mtype == "hand":
+                if room.phase != "hands":
+                    continue
+                _ensure_turn_is_valid(room)
+                if room.turn_player_id != player.player_id:
+                    await _send(ws, {"type": "error", "message": "Não é sua vez."})
+                    continue
+                if player.hand_submitted:
+                    continue
+                v = int(msg.get("value", 0))
+                v = max(0, min(START_BALLS, v, player.balls_left))
+                player.current_hand = v
+                player.hand_submitted = True
+                _advance_turn(room)
+
+                if _all_hands_submitted(room):
+                    room.phase = "guesses"
                     room.used_guesses = []
-                    room.max_guess = 0
-                    room.turn_player_id = None
-                    room.turn_player_name = None
-                    room.paused = False
+                    room.turn_index = 0
+                    _set_turn(room)
 
-                    for p in room.players:
-                        p.alive = True
-                        p.balls_left = 3
-                        p.hand_submitted = False
-                        p.guess_submitted = False
-                        p.current_hand = None
-                        p.current_guess = None
-                        p.last_hand_sent = None
+                await _broadcast_state(room)
+                continue
 
-                    await _broadcast_state(room)
+            if mtype == "guess":
+                if room.phase != "guesses":
                     continue
-
-                # ============ skip ============
-                if mtype == "skip":
-                    if room.phase not in ("hands", "guesses"):
-                        continue
-                    # pula para próximo jogador na ordem
-                    nxt = _next_turn_in_order(room, room.turn_player_id)
-                    _set_turn(room, nxt)
-                    await _broadcast_state(room)
+                _ensure_turn_is_valid(room)
+                if room.turn_player_id != player.player_id:
+                    await _send(ws, {"type": "error", "message": "Não é sua vez."})
                     continue
-
-                # ============ hand ============
-                if mtype == "hand":
-                    if room.phase != "hands":
-                        continue
-                    if room.turn_player_id != me.player_id:
-                        await _send(websocket, {"type": "error", "message": "Não é sua vez."})
-                        continue
-                    if me.hand_submitted:
-                        continue
-
-                    try:
-                        v = int(msg.get("value", 0))
-                    except Exception:
-                        v = 0
-                    v = max(0, min(3, v))
-                    v = min(v, max(0, me.balls_left))  # não pode mandar mais que estoque
-
-                    me.current_hand = v
-                    me.hand_submitted = True
-                    me.last_hand_sent = v  # 👈 cada um vê a própria mão enviada
-
-                    # avança turno
-                    nxt = _next_turn_in_order(room, room.turn_player_id)
-                    _set_turn(room, nxt)
-
-                    # se todos enviaram, muda fase
-                    if _all_hands_done(room):
-                        room.phase = "guesses"
-                        room.used_guesses = []
-                        room.max_guess = _compute_max_guess(room)
-                        _set_turn(room, room.round_order[0]["player_id"] if room.round_order else None)
-
-                    await _broadcast_state(room)
+                if player.guess_submitted:
                     continue
+                v = int(msg.get("value", 0))
+                if v in room.used_guesses:
+                    await _send(ws, {"type": "error", "message": "Palpite já usado."})
+                    continue
+                v = max(0, min(room.max_guess, v))
+                player.current_guess = v
+                player.guess_submitted = True
+                room.used_guesses.append(v)
+                _advance_turn(room)
 
-                # ============ guess ============
-                if mtype == "guess":
-                    if room.phase != "guesses":
-                        continue
-                    if room.turn_player_id != me.player_id:
-                        await _send(websocket, {"type": "error", "message": "Não é sua vez."})
-                        continue
-                    if me.guess_submitted:
-                        continue
+                if _all_guesses_submitted(room):
+                    room.phase = "reveal"
+                    payload = _reveal(room)
 
-                    try:
-                        g = int(msg.get("value", 0))
-                    except Exception:
-                        g = 0
+                    await _broadcast(room, {"type": "reveal", **payload})
+                    await _broadcast_state(room)
 
-                    if g < 0 or g > room.max_guess:
-                        await _send(websocket, {"type": "error", "message": f"Palpite inválido (0..{room.max_guess})."})
-                        continue
-                    if g in room.used_guesses:
-                        await _send(websocket, {"type": "error", "message": "Esse palpite já foi usado."})
-                        continue
-
-                    me.current_guess = g
-                    me.guess_submitted = True
-                    room.used_guesses.append(g)
-
-                    # avança turno
-                    nxt = _next_turn_in_order(room, room.turn_player_id)
-                    _set_turn(room, nxt)
-
-                    # se todos deram palpite, REVEAL
-                    if _all_guesses_done(room):
-                        room.phase = "reveal"
-
-                        hands = {p.name: int(p.current_hand or 0) for p in _alive_players(room)}
-                        guesses = {p.name: int(p.current_guess or 0) for p in _alive_players(room)}
-                        total = sum(hands.values())
-
-                        winner_name = None
-                        for nm, gv in guesses.items():
-                            if gv == total:
-                                winner_name = nm
-                                break
-
-                        result = {
-                            "round_num": room.round_num,
-                            "total": total,
-                            "winner": winner_name,
-                            "hands": hands,
-                            "guesses": guesses,
-                        }
-
-                        game_over = _finish_reveal_and_check_end(room, winner_name)
-
-                        # envia reveal
-                        for ws2 in list(room.sockets.keys()):
-                            try:
-                                await _send(ws2, {"type": "reveal", "result": result, "game_over": game_over})
-                            except Exception:
-                                room.sockets.pop(ws2, None)
-
-                        # e atualiza state (inclui balls_left pós redução)
+                    if room.phase != "over":
+                        _next_round(room)
                         await _broadcast_state(room)
-                        continue
 
+                else:
                     await _broadcast_state(room)
-                    continue
+                continue
 
     except WebSocketDisconnect:
         pass
+    except Exception:
+        pass
     finally:
-        async with room.lock:
-            pid = room.sockets.pop(websocket, None)
-            if pid:
-                p = _find_player(room, pid)
-                if p:
-                    p.connected = False
-
-                # se host caiu, transfere host pro primeiro conectado vivo
-                h = _host(room)
-                if h and h.player_id == pid:
-                    h.is_host = False
-                    for cand in room.players:
-                        if cand.connected and cand.alive:
-                            cand.is_host = True
-                            break
-
-            try:
-                await _broadcast_state(room)
-            except Exception:
-                pass
+        # desconecta
+        player.connected = False
+        room.sockets.pop(player.player_id, None)
+        await _broadcast_state(room)
