@@ -85,17 +85,11 @@ class Room:
 
     players: Dict[str, Player] = field(default_factory=dict)
 
-    # ordem fixa (entrada)
     base_order: List[str] = field(default_factory=list)
-
-    # ordem desta rodada (rotacionada)
     starter_pid: Optional[str] = None
     round_order: List[str] = field(default_factory=list)
-
-    # controle de "vez"
     turn_player_id: Optional[str] = None
 
-    # dados da rodada
     hands: Dict[str, int] = field(default_factory=dict)
     guesses: Dict[str, int] = field(default_factory=dict)
     used_guesses: Set[int] = field(default_factory=set)
@@ -346,7 +340,6 @@ def room_public_state(room: Room) -> dict:
     if room.turn_player_id and room.turn_player_id in room.players:
         turn_name = room.players[room.turn_player_id].name
 
-    # palpites públicos em tempo real (nome + número)
     guesses_public: List[dict] = []
     if room.phase in ("guesses", "reveal", "over"):
         for pid in room.round_order:
@@ -387,6 +380,63 @@ async def broadcast_room(room: Room, payload: dict) -> None:
 
 async def push_state(room: Room) -> None:
     await broadcast_room(room, {"type": "state", "state": room_public_state(room)})
+
+
+async def kick_player(room: Room, target_pid: str, reason: str = "kicked_by_host") -> None:
+    target = room.players.get(target_pid)
+    if not target:
+        return
+
+    if target.connected and target.ws is not None:
+        try:
+            await safe_send(target.ws, {"type": "kicked", "message": "Você foi removido pelo host da sala."})
+        except Exception:
+            pass
+        try:
+            await target.ws.close(code=4001)
+        except Exception:
+            pass
+
+    room.players.pop(target_pid, None)
+    if target_pid in room.base_order:
+        room.base_order.remove(target_pid)
+
+    if room.host_player_id == target_pid:
+        room.host_player_id = next(iter(room.players.keys()), None)
+
+    if room.phase in ("hands", "guesses"):
+        build_round_order(room)
+        room.turn_player_id = next_turn_player(room)
+
+    room.touch()
+
+
+async def auto_advance_if_turn_disconnected(room: Room, pid: str) -> Optional[dict]:
+    # Se o jogador que caiu era o da VEZ, a gente não trava a partida.
+    # Em "hands": mão = 0
+    # Em "guesses": palpite automático livre
+    if room.phase not in ("hands", "guesses"):
+        return None
+    if room.turn_player_id != pid:
+        return None
+
+    p = room.players.get(pid)
+    if not p or not p.alive:
+        return None
+
+    if room.phase == "hands" and not p.hand_submitted:
+        room.hands[pid] = 0
+        p.hand_submitted = True
+
+    if room.phase == "guesses" and not p.guess_submitted:
+        g = pick_auto_guess(room)
+        room.guesses[pid] = g
+        room.used_guesses.add(g)
+        p.guess_submitted = True
+
+    room.turn_player_id = next_turn_player(room)
+    reveal_payload = await advance_phase_if_ready(room)
+    return reveal_payload
 
 
 # =========================
@@ -433,7 +483,6 @@ async def ws_room(
     async with room.lock:
         room.touch()
 
-        # reconectar por key
         if key:
             for p in room.players.values():
                 if p.key == key:
@@ -441,7 +490,6 @@ async def ws_room(
                     is_reconnect = True
                     break
 
-        # novo player
         if player is None:
             if len(room.players) >= MAX_PLAYERS_PER_ROOM:
                 await safe_send(websocket, {"type": "error", "message": "Sala cheia (máx 10)."})
@@ -463,12 +511,10 @@ async def ws_room(
             if room.host_player_id is None:
                 room.host_player_id = pid
 
-        # bind
         player.ws = websocket
         player.connected = True
         player.disconnected_at = None
 
-        # se jogo já está rolando, e ordem/turn ficaram inconsistentes, tenta reconstruir
         if room.phase in ("hands", "guesses"):
             build_round_order(room)
             if room.turn_player_id is None:
@@ -501,6 +547,11 @@ async def ws_room(
                 if p is None:
                     break
 
+                # keepalive
+                if mtype == "ping":
+                    await safe_send(websocket, {"type": "pong", "ts": now_ts()})
+                    continue
+
                 if mtype == "start":
                     if p.player_id != room.host_player_id:
                         await safe_send(websocket, {"type": "error", "message": "Apenas o host pode iniciar."})
@@ -519,8 +570,21 @@ async def ws_room(
                         continue
                     restart_game(room)
 
+                elif mtype == "kick":
+                    if p.player_id != room.host_player_id:
+                        await safe_send(websocket, {"type": "error", "message": "Apenas o host pode remover jogador."})
+                        continue
+                    target_id = str(msg.get("target_id", "")).strip()
+                    if not target_id or target_id not in room.players:
+                        await safe_send(websocket, {"type": "error", "message": "Jogador inválido."})
+                        continue
+                    if target_id == room.host_player_id:
+                        await safe_send(websocket, {"type": "error", "message": "Host não pode expulsar a si mesmo."})
+                        continue
+
+                    await kick_player(room, target_id)
+
                 elif mtype == "skip":
-                    # host pode destravar a vez atual
                     if p.player_id != room.host_player_id:
                         await safe_send(websocket, {"type": "error", "message": "Apenas o host pode pular vez."})
                         continue
@@ -589,16 +653,8 @@ async def ws_room(
                     reveal_payload = await advance_phase_if_ready(room)
 
                 elif mtype == "leave":
-                    room.players.pop(p.player_id, None)
-                    if p.player_id in room.base_order:
-                        room.base_order.remove(p.player_id)
-
-                    if room.host_player_id == p.player_id:
-                        room.host_player_id = next(iter(room.players.keys()), None)
-
-                    if room.phase in ("hands", "guesses"):
-                        reset_round(room)
-
+                    # saída voluntária
+                    await kick_player(room, p.player_id, reason="left")
                     break
 
             await push_state(room)
@@ -611,14 +667,22 @@ async def ws_room(
     except Exception:
         pass
     finally:
+        reveal_payload = None
         async with room.lock:
             p = room.players.get(player.player_id)
             if p is not None:
                 p.connected = False
                 p.ws = None
                 p.disconnected_at = now_ts()
+                room.touch()
+
+                # se caiu na vez dele, não trava a partida
+                reveal_payload = await auto_advance_if_turn_disconnected(room, p.player_id)
 
         await push_state(room)
+        if reveal_payload:
+            await broadcast_room(room, reveal_payload)
+            await push_state(room)
 
 
 # =========================
