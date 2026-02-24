@@ -44,7 +44,7 @@
     .row{ display:flex; gap: 12px; flex-wrap: wrap; align-items: end; }
     label{ font-size: 12px; color: var(--muted); display:inline-block; margin-bottom: 6px; }
 
-    input, button{
+    input, button, textarea{
       padding: 10px 12px;
       font-size: 16px;
       border-radius: 12px;
@@ -54,6 +54,7 @@
       outline: none;
     }
     input{ min-width: 220px; }
+    textarea{ width: 100%; resize: vertical; min-height: 38px; }
 
     button{
       cursor: pointer;
@@ -81,10 +82,7 @@
     .hint{ color: var(--muted); margin: 8px 0 0; font-size: 13px; }
     .sep{ height:1px; background: rgba(255,255,255,0.10); margin: 12px 0; }
 
-    /* Ordem da rodada */
-    .orderBar{
-      display:flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; align-items:center;
-    }
+    .orderBar{ display:flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; align-items:center; }
     .chip{
       padding: 7px 10px;
       border-radius: 999px;
@@ -97,10 +95,7 @@
       align-items:center;
       white-space: nowrap;
     }
-    .chip .miniDot{
-      width: 8px; height: 8px; border-radius: 999px;
-      background: rgba(255,255,255,0.25);
-    }
+    .chip .miniDot{ width: 8px; height: 8px; border-radius: 999px; background: rgba(255,255,255,0.25); }
     .chip.turn{
       background: rgba(245,158,11,0.18);
       border-color: rgba(245,158,11,0.30);
@@ -108,7 +103,6 @@
     }
     .chip.turn .miniDot{ background: var(--warn); }
 
-    /* Players grid */
     .playersGrid{ display:grid; gap: 10px; }
     .playerRow{
       display:grid;
@@ -121,17 +115,13 @@
       border-radius: 14px;
       transition: transform .10s ease, border-color .10s ease, background .10s ease;
     }
-    /* Destaque do jogador da vez */
     .playerRow.turnPlayer{
       border-color: rgba(245,158,11,0.35);
       background: rgba(245,158,11,0.10);
       box-shadow: 0 0 0 3px rgba(245,158,11,0.10);
       transform: translateY(-1px);
     }
-    .turnName{
-      color: rgba(255,255,255,0.98);
-      text-shadow: 0 0 18px rgba(245,158,11,0.35);
-    }
+    .turnName{ color: rgba(255,255,255,0.98); text-shadow: 0 0 18px rgba(245,158,11,0.35); }
 
     .nameLine{ display:flex; gap: 8px; flex-wrap: wrap; align-items:center; }
     .miniTag{
@@ -161,12 +151,10 @@
     }
     .barFill{ height: 100%; width: 0%; background: rgba(255,255,255,0.85); transition: width .35s ease; }
 
-    /* Ações */
     .actionsBox p{ margin: 8px 0; color: var(--muted); }
     .quick{ display:flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
     .quick button{ font-size: 13px; padding: 8px 10px; border-radius: 999px; }
 
-    /* botão kick (host) */
     .kickBtn{
       font-size: 12px;
       padding: 6px 10px;
@@ -176,6 +164,16 @@
       color: rgba(255,255,255,0.92);
     }
     .kickBtn:hover{ border-color: rgba(239,68,68,0.35); background: rgba(239,68,68,0.18); }
+
+    .pauseBtn{
+      font-size: 13px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(245,158,11,0.25);
+      background: rgba(245,158,11,0.12);
+      color: rgba(255,255,255,0.92);
+    }
+    .pauseBtn:hover{ border-color: rgba(245,158,11,0.35); background: rgba(245,158,11,0.18); }
 
     /* Overlay resultado */
     .overlay{
@@ -224,7 +222,7 @@
     }
     .ovTimerText{ color: var(--muted); font-size: 13px; }
 
-    /* ===== PAINEL DA PARTIDA (Timeline + Heat) ===== */
+    /* Painel (simples) */
     .tabs{ display:flex; gap: 10px; flex-wrap: wrap; align-items:center; margin-top: 6px; }
     .tabBtn{
       padding: 8px 10px;
@@ -233,18 +231,15 @@
       border: 1px solid rgba(255,255,255,0.12);
       background: rgba(255,255,255,0.07);
       color: rgba(255,255,255,0.86);
-      cursor: pointer;
     }
     .tabBtn.active{
       background: rgba(255,255,255,0.12);
       border-color: rgba(255,255,255,0.20);
     }
-
     .timelineWrap{ margin-top: 12px; overflow-x: auto; padding-bottom: 6px; }
     .timeline{ display:flex; gap: 12px; min-height: 240px; }
     .roundCard{
-      width: 340px;
-      flex: 0 0 auto;
+      width: 340px; flex: 0 0 auto;
       border-radius: 16px;
       border: 1px solid rgba(255,255,255,0.12);
       background: rgba(255,255,255,0.06);
@@ -252,32 +247,12 @@
       position: relative;
       overflow: hidden;
     }
-    .roundCard::before{
-      content:"";
-      position:absolute;
-      inset:0;
-      background: radial-gradient(700px 120px at 20% 20%, rgba(59,130,246,0.18), transparent 60%),
-                  radial-gradient(700px 120px at 90% 30%, rgba(245,158,11,0.16), transparent 60%);
-      opacity: .8;
-      pointer-events:none;
-    }
-    .roundHead{
-      position: relative;
-      display:flex;
-      gap: 10px;
-      align-items: start;
-      justify-content: space-between;
-    }
+    .roundHead{ display:flex; gap: 10px; align-items: start; justify-content: space-between; }
     .roundTitle{ font-weight: 800; letter-spacing: .2px; }
     .roundMeta{ color: var(--muted); font-size: 12px; margin-top: 2px; }
     .badge{
-      position: relative;
-      display:inline-flex;
-      align-items:center;
-      gap: 6px;
-      padding: 6px 10px;
-      border-radius: 999px;
-      font-size: 12px;
+      display:inline-flex; align-items:center; gap: 6px;
+      padding: 6px 10px; border-radius: 999px; font-size: 12px;
       border: 1px solid rgba(255,255,255,0.12);
       background: rgba(0,0,0,0.20);
       color: rgba(255,255,255,0.90);
@@ -287,37 +262,16 @@
     .badge.none{ border-color: rgba(148,163,184,0.18); background: rgba(148,163,184,0.10); }
 
     .stackBar{
-      position: relative;
       margin-top: 10px;
       height: 16px;
       border-radius: 999px;
       background: rgba(255,255,255,0.08);
       border: 1px solid rgba(255,255,255,0.10);
       overflow: hidden;
-      box-shadow: inset 0 6px 16px rgba(0,0,0,0.20);
     }
-    .seg{ height: 100%; width: 0%; float: left; transition: width .5s ease; }
-    .stackLabel{
-      position: relative;
-      margin-top: 6px;
-      display:flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      align-items:center;
-      color: var(--muted);
-      font-size: 12px;
-    }
-    .legendItem{ display:inline-flex; align-items:center; gap: 6px; white-space: nowrap; }
-    .swatch{
-      width: 10px;
-      height: 10px;
-      border-radius: 999px;
-      background: rgba(255,255,255,0.40);
-      border: 1px solid rgba(255,255,255,0.20);
-    }
+    .seg{ height: 100%; float: left; }
 
     .guessesRow{
-      position: relative;
       margin-top: 10px;
       display:flex;
       gap: 8px;
@@ -341,22 +295,13 @@
       background: rgba(34,197,94,0.14);
       box-shadow: 0 0 0 3px rgba(34,197,94,0.10);
     }
-
-    .snapRow{ position: relative; margin-top: 10px; display:grid; gap: 6px; }
+    .snapRow{ margin-top: 10px; display:grid; gap: 6px; }
     .snapLine{
-      display:flex;
-      align-items:center;
-      justify-content: space-between;
-      gap: 10px;
-      color: rgba(255,255,255,0.86);
+      display:flex; align-items:center; justify-content: space-between; gap: 10px;
       font-size: 12px;
     }
     .snapName{
-      max-width: 160px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      color: rgba(255,255,255,0.86);
+      max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
     .miniBalls{ display:inline-flex; gap: 4px; align-items:center; }
     .miniBall{
@@ -367,39 +312,43 @@
     }
     .miniBall.on{ background: rgba(255,255,255,0.92); }
 
-    .heatWrap{
-      margin-top: 12px;
-      border-radius: 14px;
+    /* Chat */
+    .chatBox{
       border: 1px solid rgba(255,255,255,0.10);
       background: rgba(0,0,0,0.18);
-      overflow: hidden;
+      border-radius: 14px;
+      padding: 10px;
+      max-height: 260px;
+      overflow: auto;
+      display: grid;
+      gap: 8px;
     }
-    #heatCanvas{ width: 100%; height: 320px; display:block; }
-    .legend{
+    .chatMsg{
+      border: 1px solid rgba(255,255,255,0.10);
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
+      padding: 8px 10px;
+    }
+    .chatMsg .meta{
+      color: rgba(255,255,255,0.60);
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+    .chatRow{
       display:flex;
       gap: 10px;
+      align-items:end;
       flex-wrap: wrap;
-      align-items:center;
-      color: var(--muted);
-      font-size: 12px;
       margin-top: 10px;
     }
-    .legendBar{
-      width: 180px; height: 10px;
-      border-radius: 999px;
-      border: 1px solid rgba(255,255,255,0.10);
-      background: linear-gradient(90deg,
-        rgba(34,197,94,0.90),
-        rgba(245,158,11,0.90),
-        rgba(239,68,68,0.90)
-      );
+    .chatRow textarea{
+      flex: 1 1 420px;
+      min-height: 42px;
     }
 
     @media (max-width: 680px){
       input{ min-width: 160px; width: 100%; }
       .barWrap{ width: 140px; }
-      #heatCanvas{ height: 280px; }
-      .roundCard{ width: 300px; }
     }
   </style>
 </head>
@@ -407,9 +356,7 @@
 <body>
   <div class="wrap">
     <h1>🎱 Jogo das Bolinhas (Online)</h1>
-    <p class="subtitle">
-      Reconexão + keepalive + host expulsa + painel no final ✅
-    </p>
+    <p class="subtitle">Chat + mão pessoal + pause + prenda ✅</p>
 
     <div class="card">
       <div class="row">
@@ -432,6 +379,7 @@
         <button id="start" disabled>Iniciar (host)</button>
         <button id="restart" disabled>Reiniciar (host)</button>
         <button id="skip" disabled>Pular vez (host)</button>
+        <button id="pauseBtn" class="pauseBtn" disabled>Pausar (host)</button>
 
         <div class="pills">
           <span class="pill"><span class="dot off" id="connDot"></span> <span id="connStatus">Desconectado</span></span>
@@ -439,6 +387,7 @@
           <span class="pill" id="roundPill">rodada: -</span>
           <span class="pill" id="roomPill">sala: -</span>
           <span class="pill" id="turnPill">vez: -</span>
+          <span class="pill" id="pausePill">pause: -</span>
         </div>
       </div>
 
@@ -450,6 +399,11 @@
 
     <div class="card actionsBox">
       <h3 style="margin:0 0 8px;">Ações</h3>
+
+      <div class="row" style="align-items:center; margin-bottom: 10px;">
+        <span class="pill" id="myHandPill">minha mão: -</span>
+        <span class="pill" id="penaltyPill">prenda: -</span>
+      </div>
 
       <div id="handBox" style="display:none;">
         <p><b>Mão fechada:</b> escolha 0–3 (limitado ao seu estoque). Só aparece quando for sua vez.</p>
@@ -476,6 +430,18 @@
       <div id="waitingBox" style="display:none;">
         <p class="subtitle" id="waitingText">Aguardando...</p>
       </div>
+
+      <div class="sep"></div>
+
+      <div id="penaltyBox">
+        <p class="subtitle" style="margin:0 0 8px;">
+          <b>Prenda / Perdedor paga:</b> (host define, todo mundo vê)
+        </p>
+        <div class="row">
+          <input id="penaltyInput" placeholder="Ex: 1 coca / Pix 10 / pagar lanche..." />
+          <button id="setPenaltyBtn" disabled>Definir (host)</button>
+        </div>
+      </div>
     </div>
 
     <div class="card">
@@ -483,39 +449,38 @@
       <div id="players" class="playersGrid"></div>
     </div>
 
-    <!-- ✅ PAINEL DA PARTIDA NO FINAL (depois dos Jogadores) -->
+    <!-- Painel no final, depois dos jogadores -->
     <div class="card">
       <div class="row" style="align-items:center; justify-content: space-between;">
         <div>
           <h3 style="margin:0 0 6px;">Painel da Partida</h3>
-          <p class="subtitle" style="margin:0;">Timeline e mapa (heat).</p>
-        </div>
-        <div class="tabs">
-          <button class="tabBtn active" id="tabTimeline">Timeline</button>
-          <button class="tabBtn" id="tabHeat">Mapa</button>
+          <p class="subtitle" style="margin:0;">Timeline (últimas rodadas).</p>
         </div>
       </div>
 
-      <div id="timelineMode">
-        <div class="timelineWrap">
-          <div class="timeline" id="timeline"></div>
-        </div>
-        <p class="subtitle" style="margin-top:8px;">
-          Cada card é uma rodada: mãos, palpites e bolinhas após.
-        </p>
+      <div class="timelineWrap">
+        <div class="timeline" id="timeline"></div>
+      </div>
+      <p class="subtitle" style="margin-top:8px;">
+        Cada card é uma rodada: mãos, palpites e bolinhas após.
+      </p>
+    </div>
+
+    <!-- ✅ Chat logo embaixo do painel -->
+    <div class="card">
+      <h3 style="margin:0 0 8px;">Chat da Sala</h3>
+      <p class="subtitle" style="margin:0 0 10px;">Conversa rápida durante a partida.</p>
+
+      <div class="chatBox" id="chatBox"></div>
+
+      <div class="chatRow">
+        <textarea id="chatText" placeholder="Digite sua mensagem..."></textarea>
+        <button id="sendChat">Enviar</button>
       </div>
 
-      <div id="heatMode" style="display:none;">
-        <div class="heatWrap">
-          <canvas id="heatCanvas"></canvas>
-        </div>
-        <div class="legend">
-          <span>0 bolinhas</span>
-          <div class="legendBar"></div>
-          <span>3 bolinhas</span>
-          <span class="subtitle" style="margin:0;">(verde = perto de sair, vermelho = longe)</span>
-        </div>
-      </div>
+      <p class="subtitle" style="margin-top:10px;">
+        Dica: Enter envia / Shift+Enter pula linha.
+      </p>
     </div>
   </div>
 
@@ -547,29 +512,27 @@
 <script>
   const $ = (id) => document.getElementById(id);
 
-  // ===== estado =====
   let ws = null;
   let playerId = null;
   let state = null;
 
-  // keepalive
   let pingTimer = null;
-
-  // reconexão
   let reconnectTimer = null;
   let reconnectAttempts = 0;
   let manualClose = false;
 
-  // overlay timer
   const OVERLAY_MS = 6500;
   const OVERLAY_GAMEOVER_MS = 10000;
   let overlayTimeout = null;
   let overlayInterval = null;
 
-  // ===== util =====
+  // ===== painel timeline (histórico local)
+  const panel_rounds = [];
+  const PANEL_MAX = 25;
+  let panel_pendingReveal = null;
+
   function setError(msg = "") { $("err").textContent = msg; }
   function setHint(msg = "") { $("hint").textContent = msg; }
-
   function roomKeyStorageKey(roomId) { return `bolinhas:key:${roomId}`; }
   function currentRoom() { return ($("room").value || "").trim().toUpperCase(); }
 
@@ -591,7 +554,7 @@
   function isHost() { return state && playerId && state.host_player_id === playerId; }
   function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
 
-  // ===== overlay =====
+  // ===== overlay timer
   function stopOverlayTimers(){
     if (overlayTimeout) clearTimeout(overlayTimeout);
     if (overlayInterval) clearInterval(overlayInterval);
@@ -630,7 +593,7 @@
     $("overlay").classList.add("show");
     $("ovTitle").textContent = `Revelação — Rodada ${result.round_num}`;
     $("ovMeta").textContent = gameOver
-      ? `Fim de jogo! Perdedor: ${gameOver.loser ?? "?"}`
+      ? `Fim de jogo! Perdedor: ${gameOver.loser ?? "?"} • Prenda: ${gameOver.penalty ?? ""}`
       : "Resultado da rodada.";
     $("ovTotal").textContent = String(result.total);
 
@@ -648,7 +611,7 @@
   $("closeOverlay").onclick = () => { $("overlay").classList.remove("show"); stopOverlayTimers(); };
   $("overlay").onclick = (e) => { if (e.target === $("overlay")) { $("overlay").classList.remove("show"); stopOverlayTimers(); } };
 
-  // ===== UI render =====
+  // ===== UI render
   function renderOrderBar(s) {
     const bar = $("orderBar");
     bar.innerHTML = "";
@@ -726,7 +689,6 @@
       barWrap.appendChild(barFill);
       rb.appendChild(barWrap);
 
-      // kick (somente host e não em si mesmo)
       if (isHost() && p.player_id !== playerId) {
         const kick = document.createElement("button");
         kick.className = "kickBtn";
@@ -763,6 +725,171 @@
     $("usedGuesses").textContent = (s.used_guesses || []).join(", ") || "-";
   }
 
+  // ===== Painel Timeline
+  function panelColorForName(name){
+    let h = 0;
+    for (let i=0;i<name.length;i++) h = (h*31 + name.charCodeAt(i)) % 360;
+    return `hsl(${h}, 80%, 65%)`;
+  }
+  function panelMiniBalls(ballsLeft, max=3){
+    const wrap = document.createElement("span");
+    wrap.className = "miniBalls";
+    for (let i=0;i<max;i++){
+      const b = document.createElement("span");
+      b.className = "miniBall" + (i < ballsLeft ? " on" : "");
+      wrap.appendChild(b);
+    }
+    return wrap;
+  }
+  function panelOnReveal(result, gameOver){
+    if (!result) return;
+    panel_pendingReveal = { result, gameOver: gameOver || null };
+  }
+  function panelOnState(newState){
+    if (!newState) return;
+
+    if (panel_pendingReveal){
+      const { result, gameOver } = panel_pendingReveal;
+
+      const balls_after = {};
+      (newState.players || []).forEach(p => { balls_after[p.name] = p.balls_left; });
+
+      panel_rounds.push({
+        round_num: result.round_num,
+        total: result.total,
+        winner: result.winner || null,
+        hands: result.hands || {},
+        guesses: result.guesses || {},
+        balls_after,
+        game_over: gameOver
+      });
+
+      while (panel_rounds.length > PANEL_MAX) panel_rounds.shift();
+      panel_pendingReveal = null;
+
+      panelRenderTimeline();
+    }
+  }
+  function panelRenderTimeline(){
+    const tl = $("timeline");
+    tl.innerHTML = "";
+
+    if (!panel_rounds.length){
+      const card = document.createElement("div");
+      card.className = "roundCard";
+      card.innerHTML = `
+        <div class="roundHead">
+          <div>
+            <div class="roundTitle">Sem rodadas ainda</div>
+            <div class="roundMeta">Quando sair uma revelação (REVEAL), aparece aqui.</div>
+          </div>
+          <span class="badge none">⏳ aguardando</span>
+        </div>
+      `;
+      tl.appendChild(card);
+      return;
+    }
+
+    for (const r of panel_rounds){
+      const card = document.createElement("div");
+      card.className = "roundCard";
+
+      const winnerBadge = r.winner
+        ? `<span class="badge good">🏆 ${r.winner}</span>`
+        : `<span class="badge none">ninguém acertou</span>`;
+
+      const hands = r.hands || {};
+      const guesses = r.guesses || {};
+      const names = Object.keys(hands);
+      const total = Math.max(1, Number(r.total || 0));
+
+      const segs = names.map(n => {
+        const val = Number(hands[n] ?? 0);
+        const w = (val / total) * 100;
+        const col = panelColorForName(n);
+        return `<div class="seg" style="width:${w}%; background:${col};"></div>`;
+      }).join("");
+
+      const gNames = Object.keys(guesses);
+      const guessChips = gNames.map(n => {
+        const gv = guesses[n];
+        const correct = (r.winner && n === r.winner);
+        return `<span class="gChip ${correct ? "correct" : ""}">${n}: <b>${gv}</b></span>`;
+      }).join("");
+
+      card.innerHTML = `
+        <div class="roundHead">
+          <div>
+            <div class="roundTitle">Rodada ${r.round_num} • Total <b>${r.total}</b></div>
+            <div class="roundMeta">${r.game_over ? `Fim de jogo — Perdedor: ${r.game_over.loser ?? "?"}` : "Resumo da rodada"}</div>
+          </div>
+          ${winnerBadge}
+        </div>
+
+        <div class="stackBar">${segs}</div>
+
+        <div class="guessesRow">
+          ${guessChips || `<span class="gChip">Sem palpites</span>`}
+        </div>
+      `;
+
+      const snapWrap = document.createElement("div");
+      snapWrap.className = "snapRow";
+
+      const ballsAfter = r.balls_after || {};
+      Object.entries(ballsAfter).forEach(([n, b]) => {
+        const line = document.createElement("div");
+        line.className = "snapLine";
+
+        const nm = document.createElement("span");
+        nm.className = "snapName";
+        nm.textContent = n;
+
+        const balls = panelMiniBalls(Number(b) || 0, 3);
+
+        line.appendChild(nm);
+        line.appendChild(balls);
+        snapWrap.appendChild(line);
+      });
+
+      card.appendChild(snapWrap);
+      tl.appendChild(card);
+    }
+
+    tl.parentElement.scrollLeft = tl.parentElement.scrollWidth;
+  }
+
+  // ===== Chat render
+  function renderChat(chatList){
+    const box = $("chatBox");
+    box.innerHTML = "";
+
+    if (!chatList || !chatList.length){
+      box.innerHTML = `<div class="chatMsg"><div class="meta">Sistema</div>Sem mensagens ainda.</div>`;
+      return;
+    }
+
+    for (const m of chatList){
+      const div = document.createElement("div");
+      div.className = "chatMsg";
+      const when = (m.ts ? ` • ${m.ts}s` : "");
+      div.innerHTML = `<div class="meta">${m.name || "?"}${when}</div>${escapeHtml(m.text || "")}`;
+      box.appendChild(div);
+    }
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function escapeHtml(str){
+    return String(str)
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;")
+      .replaceAll("\n","<br/>");
+  }
+
+  // ===== Render do state
   function renderState(s) {
     state = s;
 
@@ -771,11 +898,22 @@
     $("roomPill").textContent = `sala: ${s.room_id ?? "-"}`;
     $("turnPill").textContent = s.turn_player_name ? `vez: ${s.turn_player_name}` : "vez: -";
 
+    $("pausePill").textContent = `pause: ${s.paused ? "SIM" : "NÃO"}`;
+    $("pauseBtn").textContent = s.paused ? "Retomar (host)" : "Pausar (host)";
+
+    // minha mão enviada
+    $("myHandPill").textContent = `minha mão: ${ (s.my_last_hand === null || s.my_last_hand === undefined) ? "-" : s.my_last_hand }`;
+
+    // prenda
+    const pen = (s.penalty_text || "").trim();
+    $("penaltyPill").textContent = `prenda: ${pen ? pen : "-"}`;
+
+    // botões host
     $("start").disabled = !((s.phase === "lobby") && isHost());
     $("restart").disabled = !isHost();
-    $("skip").disabled = !(
-      isHost() && (s.phase === "hands" || s.phase === "guesses")
-    );
+    $("skip").disabled = !(isHost() && (s.phase === "hands" || s.phase === "guesses"));
+    $("pauseBtn").disabled = !isHost();
+    $("setPenaltyBtn").disabled = !isHost();
 
     $("maxGuess").textContent = (s.max_guess ?? "-");
 
@@ -783,12 +921,16 @@
     renderOrderBar(s);
     renderPlayers(s);
 
+    // painel timeline
+    panelOnState(s);
+
+    // chat
+    renderChat(s.chat || []);
+
+    // boxes
     const me = you();
     $("handAck").textContent = "";
     $("guessAck").textContent = "";
-
-    // Painel: sempre alimenta com state (pra capturar balls_after após reveal)
-    panelOnState(s);
 
     if (!me) {
       showBoxes({ waiting: true });
@@ -810,13 +952,18 @@
       return;
     }
 
+    if (s.paused) {
+      showBoxes({ waiting: true });
+      $("waitingText").textContent = "⏸️ Jogo pausado pelo host.";
+      return;
+    }
+
     if (s.phase === "hands") {
       if (me.hand_submitted) {
         showBoxes({ waiting: true });
         $("waitingText").textContent = "Você já enviou sua mão. Aguardando os demais...";
         return;
       }
-
       if (s.turn_player_id === me.player_id) {
         const maxHand = clamp(me.balls_left ?? 0, 0, 3);
         $("hand").max = String(maxHand);
@@ -825,7 +972,6 @@
         showBoxes({ hand: true });
         return;
       }
-
       showBoxes({ waiting: true });
       $("waitingText").textContent = `Aguardando... agora é a vez de ${s.turn_player_name || "alguém"}.`;
       return;
@@ -837,7 +983,6 @@
         $("waitingText").textContent = "Você já enviou seu palpite. Aguardando os demais...";
         return;
       }
-
       if (s.turn_player_id === me.player_id) {
         const mg = s.max_guess ?? 30;
         $("guess").min = "0";
@@ -846,7 +991,6 @@
         showBoxes({ guess: true });
         return;
       }
-
       showBoxes({ waiting: true });
       $("waitingText").textContent = `Aguardando... agora é a vez de ${s.turn_player_name || "alguém"}.`;
       return;
@@ -870,7 +1014,7 @@
     $("waitingText").textContent = "Aguardando...";
   }
 
-  // ===== WS / rede =====
+  // ===== WS / rede
   function wsUrl(room, name, key){
     const proto = (location.protocol === "https:") ? "wss" : "ws";
     const base = `${proto}://${location.host}`;
@@ -956,7 +1100,6 @@
         playerId = msg.player_id;
         $("room").value = String(msg.room_id || room).toUpperCase();
         $("roomPill").textContent = `sala: ${msg.room_id || room}`;
-
         if (msg.player_key) {
           localStorage.setItem(roomKeyStorageKey($("room").value), msg.player_key);
         }
@@ -969,11 +1112,19 @@
       }
 
       if (msg.type === "reveal") {
-        // painel precisa disso (antes do próximo state)
         panelOnReveal(msg.result, msg.game_over || null);
-
-        // overlay
         showOverlay(msg.result, msg.game_over || null);
+        return;
+      }
+
+      if (msg.type === "chat") {
+        // opcional: chega evento de chat instantâneo; state também virá logo
+        // nada obrigatório aqui
+        return;
+      }
+
+      if (msg.type === "error") {
+        setError(msg.message || "Erro.");
         return;
       }
 
@@ -997,20 +1148,17 @@
     };
   }
 
-  // ===== botões =====
+  // ===== botões
   $("create").onclick = async () => {
     setError("");
     setHint("Criando sala...");
     try {
       const resp = await fetch("/api/create-room", { method: "GET" });
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const data = await resp.json();
-      if (!data.room_id) throw new Error("room_id ausente");
-
-      $("room").value = String(data.room_id).toUpperCase();
+      $("room").value = String(data.room_id || "").toUpperCase();
       setHint(`Sala criada: ${$("room").value}`);
     } catch (e) {
-      setError("Falha ao criar sala. Veja o Console/Network para detalhes.");
+      setError("Falha ao criar sala.");
       setHint("");
     }
   };
@@ -1032,6 +1180,12 @@
   $("start").onclick = () => send("start", {});
   $("restart").onclick = () => send("restart", {});
   $("skip").onclick = () => send("skip", {});
+  $("pauseBtn").onclick = () => send("pause", {});
+
+  $("setPenaltyBtn").onclick = () => {
+    const text = ($("penaltyInput").value || "").trim();
+    send("set_penalty", { text });
+  };
 
   $("sendHand").onclick = () => {
     const v = clamp(parseInt($("hand").value || "0", 10), 0, 3);
@@ -1050,332 +1204,26 @@
     $("guessAck").textContent = "Enviado ✅";
   };
 
-  // ==========================================================
-  // =============== PAINEL DA PARTIDA (BOTTOM) ===============
-  // ==========================================================
-  const panel_rounds = []; // [{round_num,total,winner,hands,guesses,balls_after,game_over}]
-  const PANEL_MAX = 25;
-  let panel_pendingReveal = null;
-
-  function panelColorForName(name){
-    let h = 0;
-    for (let i=0;i<name.length;i++) h = (h*31 + name.charCodeAt(i)) % 360;
-    return `hsl(${h}, 80%, 65%)`;
-  }
-
-  function panelMiniBalls(ballsLeft, max=3){
-    const wrap = document.createElement("span");
-    wrap.className = "miniBalls";
-    for (let i=0;i<max;i++){
-      const b = document.createElement("span");
-      b.className = "miniBall" + (i < ballsLeft ? " on" : "");
-      wrap.appendChild(b);
+  // Chat: Enter envia / Shift+Enter quebra linha
+  $("chatText").addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey){
+      e.preventDefault();
+      $("sendChat").click();
     }
-    return wrap;
-  }
+  });
 
-  function panelSetTab(mode){
-    const tl = $("timelineMode");
-    const hm = $("heatMode");
-    const b1 = $("tabTimeline");
-    const b2 = $("tabHeat");
+  $("sendChat").onclick = () => {
+    const t = ($("chatText").value || "").trim();
+    if (!t) return;
+    send("chat", { text: t });
+    $("chatText").value = "";
+  };
 
-    if (mode === "timeline"){
-      tl.style.display = "block";
-      hm.style.display = "none";
-      b1.classList.add("active");
-      b2.classList.remove("active");
-    } else {
-      tl.style.display = "none";
-      hm.style.display = "block";
-      b2.classList.add("active");
-      b1.classList.remove("active");
-      panelDrawHeat();
-    }
-  }
-
-  function panelInit(){
-    $("tabTimeline").onclick = () => panelSetTab("timeline");
-    $("tabHeat").onclick = () => panelSetTab("heat");
-    panelSetTab("timeline");
-
-    window.addEventListener("resize", () => {
-      if ($("heatMode").style.display !== "none") panelDrawHeat();
-    });
-
-    panelRenderTimeline(); // mostra placeholder
-  }
-
-  function panelOnReveal(result, gameOver){
-    if (!result) return;
-    panel_pendingReveal = { result, gameOver: gameOver || null };
-  }
-
-  function panelOnState(newState){
-    if (!newState) return;
-
-    if (panel_pendingReveal){
-      const { result, gameOver } = panel_pendingReveal;
-
-      const balls_after = {};
-      (newState.players || []).forEach(p => { balls_after[p.name] = p.balls_left; });
-
-      panel_rounds.push({
-        round_num: result.round_num,
-        total: result.total,
-        winner: result.winner || null,
-        hands: result.hands || {},
-        guesses: result.guesses || {},
-        balls_after,
-        game_over: gameOver
-      });
-
-      while (panel_rounds.length > PANEL_MAX) panel_rounds.shift();
-
-      panel_pendingReveal = null;
-
-      panelRenderTimeline();
-      if ($("heatMode").style.display !== "none") panelDrawHeat();
-    }
-  }
-
-  function panelRenderTimeline(){
-    const tl = $("timeline");
-    tl.innerHTML = "";
-
-    if (!panel_rounds.length){
-      const card = document.createElement("div");
-      card.className = "roundCard";
-      card.innerHTML = `
-        <div class="roundHead">
-          <div>
-            <div class="roundTitle">Sem rodadas ainda</div>
-            <div class="roundMeta">Quando sair uma revelação (REVEAL), aparece aqui.</div>
-          </div>
-          <span class="badge none">⏳ aguardando</span>
-        </div>
-      `;
-      tl.appendChild(card);
-      return;
-    }
-
-    for (const r of panel_rounds){
-      const card = document.createElement("div");
-      card.className = "roundCard";
-
-      const winnerBadge = r.winner
-        ? `<span class="badge good">🏆 ${r.winner}</span>`
-        : `<span class="badge none">ninguém acertou</span>`;
-
-      const hands = r.hands || {};
-      const guesses = r.guesses || {};
-      const names = Object.keys(hands);
-
-      const total = Math.max(1, Number(r.total || 0));
-      const segs = names.map(n => {
-        const val = Number(hands[n] ?? 0);
-        const w = (val / total) * 100;
-        const col = panelColorForName(n);
-        return `<div class="seg" style="width:${w}%; background:${col};"></div>`;
-      }).join("");
-
-      const legend = names.map(n => {
-        const val = Number(hands[n] ?? 0);
-        const col = panelColorForName(n);
-        return `<span class="legendItem"><span class="swatch" style="background:${col};"></span>${n}: ${val}</span>`;
-      }).join("");
-
-      const gNames = Object.keys(guesses);
-      const guessChips = gNames.map(n => {
-        const gv = guesses[n];
-        const correct = (r.winner && n === r.winner);
-        return `<span class="gChip ${correct ? "correct" : ""}">${n}: <b>${gv}</b></span>`;
-      }).join("");
-
-      card.innerHTML = `
-        <div class="roundHead">
-          <div>
-            <div class="roundTitle">Rodada ${r.round_num} • Total <b>${r.total}</b></div>
-            <div class="roundMeta">${r.game_over ? `Fim de jogo — Perdedor: ${r.game_over.loser ?? "?"}` : "Resumo da rodada"}</div>
-          </div>
-          ${winnerBadge}
-        </div>
-
-        <div class="stackBar">${segs}</div>
-        <div class="stackLabel">${legend || `<span class="legendItem">-</span>`}</div>
-
-        <div class="guessesRow">
-          ${guessChips || `<span class="gChip">Sem palpites</span>`}
-        </div>
-      `;
-
-      const snapWrap = document.createElement("div");
-      snapWrap.className = "snapRow";
-
-      const ballsAfter = r.balls_after || {};
-      Object.entries(ballsAfter).forEach(([n, b]) => {
-        const line = document.createElement("div");
-        line.className = "snapLine";
-
-        const nm = document.createElement("span");
-        nm.className = "snapName";
-        nm.textContent = n;
-
-        const balls = panelMiniBalls(Number(b) || 0, 3);
-
-        line.appendChild(nm);
-        line.appendChild(balls);
-        snapWrap.appendChild(line);
-      });
-
-      card.appendChild(snapWrap);
-      tl.appendChild(card);
-    }
-
-    // rola pro final (rodada mais recente)
-    tl.parentElement.scrollLeft = tl.parentElement.scrollWidth;
-  }
-
-  function panelColorForBalls(b){
-    // 0 -> verde, 1 -> amarelo, 2 -> laranja, 3 -> vermelho
-    const t = Math.max(0, Math.min(1, (b / 3)));
-    function lerp(a,c,t){ return Math.round(a + (c-a)*t); }
-
-    // verde (34,197,94) -> amarelo (245,158,11) -> vermelho (239,68,68)
-    let r,g,bl;
-    if (t <= 0.5){
-      const k = t/0.5;
-      r = lerp(34, 245, k);
-      g = lerp(197,158, k);
-      bl = lerp(94, 11, k);
-    } else {
-      const k = (t-0.5)/0.5;
-      r = lerp(245,239, k);
-      g = lerp(158, 68, k);
-      bl = lerp(11, 68, k);
-    }
-    return `rgba(${r},${g},${bl},0.90)`;
-  }
-
-  function panelDrawHeat(){
-    const canvas = $("heatCanvas");
-    if (!canvas) return;
-
-    const dpr = window.devicePixelRatio || 1;
-    const cssW = canvas.clientWidth || 900;
-    const cssH = 320;
-
-    canvas.width = Math.floor(cssW * dpr);
-    canvas.height = Math.floor(cssH * dpr);
-
-    const ctx = canvas.getContext("2d");
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-    // players: pega do state atual se existir; senão tenta do último snapshot
-    let players = [];
-    if (state && Array.isArray(state.players) && state.players.length){
-      players = state.players.map(p => p.name);
-    } else if (panel_rounds.length){
-      const last = panel_rounds[panel_rounds.length - 1];
-      players = Object.keys(last.balls_after || {});
-    }
-
-    // rounds (x)
-    const rounds = panel_rounds.slice(-PANEL_MAX);
-    const cols = Math.max(1, rounds.length);
-    const rows = Math.max(1, players.length);
-
-    // layout
-    const padL = 140;  // espaço pros nomes
-    const padT = 14;
-    const padR = 12;
-    const padB = 26;
-
-    const W = cssW;
-    const H = cssH;
-
-    // fundo
-    ctx.clearRect(0,0,W,H);
-    ctx.fillStyle = "rgba(255,255,255,0.02)";
-    ctx.fillRect(0,0,W,H);
-
-    // título leve
-    ctx.fillStyle = "rgba(255,255,255,0.85)";
-    ctx.font = "14px system-ui";
-    ctx.fillText("Mapa: bolinhas após cada rodada", 14, 18);
-
-    // área grid
-    const gridX = padL;
-    const gridY = padT + 14;
-    const gridW = W - padL - padR;
-    const gridH = H - gridY - padB;
-
-    // borda
-    ctx.strokeStyle = "rgba(255,255,255,0.12)";
-    ctx.strokeRect(gridX, gridY, gridW, gridH);
-
-    const cellW = gridW / cols;
-    const cellH = gridH / rows;
-
-    // labels Y (nomes)
-    ctx.font = "12px system-ui";
-    ctx.fillStyle = "rgba(255,255,255,0.78)";
-    players.forEach((name, i) => {
-      const y = gridY + i*cellH + cellH*0.65;
-      ctx.fillText(name, 14, y);
-    });
-
-    // labels X (rodadas) - algumas
-    ctx.fillStyle = "rgba(255,255,255,0.60)";
-    const step = Math.max(1, Math.floor(cols / 8));
-    for (let c=0; c<cols; c+=step){
-      const rn = rounds[c]?.round_num ?? "";
-      const x = gridX + c*cellW + 2;
-      ctx.fillText(String(rn), x, H - 10);
-    }
-
-    // cells
-    for (let c=0; c<cols; c++){
-      const snap = rounds[c].balls_after || {};
-      for (let r=0; r<rows; r++){
-        const pname = players[r];
-        const b = Number(snap[pname]);
-        const val = Number.isFinite(b) ? b : 3; // se não tem dado, assume 3
-
-        ctx.fillStyle = panelColorForBalls(val);
-        ctx.fillRect(
-          gridX + c*cellW + 1,
-          gridY + r*cellH + 1,
-          cellW - 2,
-          cellH - 2
-        );
-      }
-    }
-
-    // grid linhas leves
-    ctx.strokeStyle = "rgba(255,255,255,0.06)";
-    for (let c=1; c<cols; c++){
-      const x = gridX + c*cellW;
-      ctx.beginPath();
-      ctx.moveTo(x, gridY);
-      ctx.lineTo(x, gridY + gridH);
-      ctx.stroke();
-    }
-    for (let r=1; r<rows; r++){
-      const y = gridY + r*cellH;
-      ctx.beginPath();
-      ctx.moveTo(gridX, y);
-      ctx.lineTo(gridX + gridW, y);
-      ctx.stroke();
-    }
-  }
-
-  // ===== boot =====
+  // boot
   (function init(){
     setConnected(false);
-    panelInit();
+    panelRenderTimeline();
 
-    // preenche sala via query ?room=
     const qs = new URLSearchParams(location.search);
     const r = (qs.get("room") || "").trim().toUpperCase();
     if (r) $("room").value = r;
