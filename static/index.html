@@ -81,6 +81,7 @@
     .hint{ color: var(--muted); margin: 8px 0 0; font-size: 13px; }
     .sep{ height:1px; background: rgba(255,255,255,0.10); margin: 12px 0; }
 
+    /* Ordem */
     .orderBar{
       display:flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; align-items:center;
     }
@@ -104,6 +105,7 @@
     }
     .chip.turn .miniDot{ background: var(--warn); }
 
+    /* Players */
     .playersGrid{ display:grid; gap: 10px; }
     .playerRow{
       display:grid;
@@ -126,7 +128,6 @@
       color: rgba(255,255,255,0.98);
       text-shadow: 0 0 18px rgba(245,158,11,0.35);
     }
-
     .nameLine{ display:flex; gap: 8px; flex-wrap: wrap; align-items:center; }
     .miniTag{
       font-size: 12px; padding: 3px 8px; border-radius: 999px;
@@ -159,7 +160,7 @@
     .quick{ display:flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
     .quick button{ font-size: 13px; padding: 8px 10px; border-radius: 999px; }
 
-    /* ✅ Expulsar (host) - voltou */
+    /* Expulsar */
     .kickBtn{
       font-size: 12px;
       padding: 7px 10px;
@@ -170,7 +171,7 @@
     }
     .kickBtn:hover{ border-color: rgba(239,68,68,0.35); background: rgba(239,68,68,0.18); }
 
-    /* ✅ Overlay 10s (fim da rodada) - voltou */
+    /* Overlay 10s */
     .roundOverlay{
       position: fixed;
       inset: 0;
@@ -198,9 +199,113 @@
       margin: 6px 0 6px;
     }
 
+    /* ✅ Painel bonito em cards (timeline) */
+    .timelineWrap{ margin-top: 10px; overflow-x: auto; padding-bottom: 6px; }
+    .timeline{ display:flex; gap: 12px; min-height: 230px; }
+    .roundCard{
+      width: 340px;
+      flex: 0 0 auto;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.06);
+      padding: 12px;
+      position: relative;
+      overflow: hidden;
+    }
+    .roundCard::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:
+        radial-gradient(700px 120px at 20% 20%, rgba(59,130,246,0.18), transparent 60%),
+        radial-gradient(700px 120px at 90% 30%, rgba(245,158,11,0.16), transparent 60%);
+      opacity: .85;
+      pointer-events:none;
+    }
+    .roundHead{
+      position: relative;
+      display:flex;
+      gap: 10px;
+      align-items: start;
+      justify-content: space-between;
+    }
+    .roundTitle{ font-weight: 850; letter-spacing: .2px; }
+    .roundMeta{ color: var(--muted); font-size: 12px; margin-top: 2px; }
+    .badge{
+      position: relative;
+      display:inline-flex;
+      align-items:center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(0,0,0,0.20);
+      color: rgba(255,255,255,0.90);
+      white-space: nowrap;
+    }
+    .badge.good{ border-color: rgba(34,197,94,0.25); background: rgba(34,197,94,0.12); }
+    .badge.none{ border-color: rgba(148,163,184,0.18); background: rgba(148,163,184,0.10); }
+
+    .stackBar{
+      position: relative;
+      margin-top: 10px;
+      height: 16px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.10);
+      overflow: hidden;
+      box-shadow: inset 0 6px 16px rgba(0,0,0,0.20);
+    }
+    .seg{ height: 100%; width: 0%; transition: width .5s ease; }
+    .stackLabel{
+      position: relative;
+      margin-top: 6px;
+      display:flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items:center;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .legendItem{ display:inline-flex; align-items:center; gap: 6px; white-space: nowrap; }
+    .swatch{
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.20);
+    }
+
+    .guessesRow{
+      position: relative;
+      margin-top: 10px;
+      display:flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items:center;
+    }
+    .gChip{
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(0,0,0,0.18);
+      font-size: 12px;
+      color: rgba(255,255,255,0.90);
+      display:inline-flex;
+      align-items:center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+    .gChip.correct{
+      border-color: rgba(34,197,94,0.35);
+      background: rgba(34,197,94,0.14);
+      box-shadow: 0 0 0 3px rgba(34,197,94,0.10);
+    }
+
     @media (max-width: 680px){
       input{ min-width: 160px; width: 100%; }
       .barWrap{ width: 140px; }
+      .roundCard{ width: 300px; }
     }
   </style>
 </head>
@@ -303,16 +408,17 @@
       <div id="players" class="playersGrid"></div>
     </div>
 
-    <!-- Painel da Partida (fica em baixo dos jogadores) -->
+    <!-- ✅ Painel da Partida em CARDS -->
     <div class="card" id="panelCard">
       <h3 style="margin:0 0 8px;">Painel da Partida</h3>
-      <p class="subtitle" style="margin:0 0 10px;">Histórico por rodada (enquanto a página estiver aberta).</p>
-      <div id="roundHistory" style="display:grid; gap:10px;">
-        <p class="subtitle" style="margin:0;">Sem rodadas ainda.</p>
+      <p class="subtitle" style="margin:0 0 10px;">Timeline por rodada (enquanto a página estiver aberta).</p>
+      <div id="timelineEmpty" class="subtitle" style="margin:0;">Sem rodadas ainda.</div>
+      <div class="timelineWrap" id="timelineWrap" style="display:none;">
+        <div class="timeline" id="timelinePanel"></div>
       </div>
     </div>
 
-    <!-- Chat (abaixo do painel) -->
+    <!-- Chat abaixo do painel -->
     <div class="card">
       <h3 style="margin:0 0 8px;">Chat da Sala</h3>
       <div id="chatLog" style="
@@ -330,11 +436,11 @@
         <button id="rCry" title="😭">😭</button>
         <button id="rAngry" title="😡">😡</button>
       </div>
-      <p class="subtitle" style="margin:10px 0 0;">Dica: reações aparecem ao lado do seu nome.</p>
+      <p class="subtitle" style="margin:10px 0 0;">Reações aparecem ao lado do seu nome.</p>
     </div>
   </div>
 
-  <!-- ✅ Overlay 10s no fim de cada rodada -->
+  <!-- Overlay 10s -->
   <div class="roundOverlay" id="roundOverlay">
     <div class="roundModal" role="dialog" aria-modal="true" aria-label="Resultado da rodada">
       <h3 id="ovTitleRound">Resultado</h3>
@@ -354,7 +460,7 @@
   // keepalive
   let pingTimer = null;
 
-  // reconexão
+  // ✅ reconexão automática
   let reconnectTimer = null;
   let reconnectAttempts = 0;
   let manualClose = false;
@@ -362,11 +468,11 @@
   // UI extras
   let myLastHand = null;
 
-  // painel
-  const matchHistory = []; // [{ round_num, total, winner(s), hands, guesses }]
+  // painel (timeline cards)
+  const matchHistory = [];
   const MAX_HISTORY = 40;
 
-  // ✅ Overlay 10s (fim da rodada) — voltou
+  // overlay
   const OVERLAY_MS = 10000;
   let ovTimer = null;
   let ovInterval = null;
@@ -413,12 +519,12 @@
     if (e.target === $("roundOverlay")) closeRoundOverlay();
   };
 
-  // ===== util =====
   function setError(msg = "") { $("err").textContent = msg; }
   function setHint(msg = "") { $("hint").textContent = msg; }
 
   function roomKeyStorageKey(roomId) { return `bolinhas:key:${roomId}`; }
   function currentRoom() { return ($("room").value || "").trim().toUpperCase(); }
+
   function setConnected(ok) {
     $("connStatus").textContent = ok ? "Conectado" : "Desconectado";
     $("connDot").className = `dot ${ok ? "on" : "off"}`;
@@ -437,7 +543,18 @@
   function isHost() { return state && playerId && state.host_player_id === playerId; }
   function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
 
-  // ===== UI bits =====
+  // ===== colors for panel segments
+  const colorByName = new Map();
+  function colorForName(name){
+    if (colorByName.has(name)) return colorByName.get(name);
+    let h = 0;
+    for (let i=0;i<name.length;i++) h = (h*31 + name.charCodeAt(i)) % 360;
+    const col = `hsl(${h}, 80%, 60%)`;
+    colorByName.set(name, col);
+    return col;
+  }
+
+  // ===== order bar
   function renderOrderBar(s) {
     const bar = $("orderBar");
     bar.innerHTML = "";
@@ -458,6 +575,7 @@
     });
   }
 
+  // ===== balls UI
   function ballsHTML(ballsLeft, maxBalls = 3) {
     const wrap = document.createElement("span");
     wrap.className = "balls";
@@ -516,7 +634,7 @@
       barWrap.appendChild(barFill);
       rb.appendChild(barWrap);
 
-      // ✅ Expulsar (host) — voltou (só host e não em você)
+      // expulsar (host)
       if (isHost() && p.player_id !== playerId) {
         const kick = document.createElement("button");
         kick.className = "kickBtn";
@@ -532,6 +650,7 @@
     });
   }
 
+  // quick hand 0..3
   function renderHandQuick(maxHand) {
     const q = $("handQuick");
     q.innerHTML = "";
@@ -545,7 +664,6 @@
   }
 
   function renderGuessesRolling(s) {
-    // Mostra em qualquer fase o que já foi chegando (quando server mandar guesses_public)
     const gp = s.guesses_public || [];
     if (gp.length) {
       $("usedGuesses").textContent = gp.map(x => `${x.name}: ${x.guess}`).join("  •  ");
@@ -554,49 +672,119 @@
     $("usedGuesses").textContent = (s.used_guesses || []).join(", ") || "— (ninguém enviou palpite ainda)";
   }
 
+  // ✅ painel bonito (cards)
   function renderHistory(){
-    const box = $("roundHistory");
-    box.innerHTML = "";
+    const empty = $("timelineEmpty");
+    const wrap = $("timelineWrap");
+    const tl = $("timelinePanel");
 
     if (!matchHistory.length){
-      box.innerHTML = `<p class="subtitle" style="margin:0;">Sem rodadas ainda.</p>`;
+      empty.style.display = "block";
+      wrap.style.display = "none";
       return;
     }
 
-    const reversed = [...matchHistory].reverse();
-    for (const item of reversed){
+    empty.style.display = "none";
+    wrap.style.display = "block";
+    tl.innerHTML = "";
+
+    // mostra últimas 12 (fica bonito e leve)
+    const list = matchHistory.slice(-12);
+
+    for (const item of list){
       const card = document.createElement("div");
-      card.style.cssText = `
-        border: 1px solid rgba(255,255,255,0.10);
-        background: rgba(255,255,255,0.05);
-        border-radius: 14px;
-        padding: 12px;
-      `;
+      card.className = "roundCard";
 
-      const winTxt = item.winners && item.winners.length
-        ? `🏆 <b>${item.winners.join(", ")}</b> acertou(aram) e perdeu(deram) 1 bolinha.`
-        : (item.winner ? `🏆 <b>${item.winner}</b> acertou e perdeu 1 bolinha.` : `Ninguém acertou nesta rodada.`);
+      const winners = item.winners && item.winners.length ? item.winners : (item.winner ? [item.winner] : []);
+      const badgeClass = winners.length ? "good" : "none";
+      const badgeText = winners.length ? `🏆 ${winners.join(", ")}` : "sem vencedor";
 
-      const handsTxt = Object.entries(item.hands || {}).map(([n,v]) => `${n}: ${v}`).join(" • ") || "-";
-      const guessesTxt = Object.entries(item.guesses || {}).map(([n,v]) => `${n}: ${v}`).join(" • ") || "-";
+      const handsEntries = Object.entries(item.hands || {});
+      const guessesEntries = Object.entries(item.guesses || {});
+      const total = Math.max(0, Number(item.total || 0));
 
       card.innerHTML = `
-        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-          <span class="pill">Rodada <b>${item.round_num}</b></span>
-          <span class="pill">Total: <b>${item.total}</b></span>
-          <span class="pill">${winTxt}</span>
+        <div class="roundHead">
+          <div>
+            <div class="roundTitle">Rodada ${item.round_num}</div>
+            <div class="roundMeta">Total: ${total}</div>
+          </div>
+          <span class="badge ${badgeClass}">${badgeText}</span>
         </div>
-        <div class="subtitle" style="margin-top:10px;"><b>Mãos:</b> ${handsTxt}</div>
-        <div class="subtitle" style="margin-top:6px;"><b>Palpites:</b> ${guessesTxt}</div>
+
+        <div class="stackBar"></div>
+        <div class="stackLabel"></div>
+
+        <div class="guessesRow"></div>
+
+        <div class="subtitle" style="position:relative; margin-top: 10px;">
+          <b>Mãos:</b> ${handsEntries.map(([n,v]) => `${n}: ${v}`).join(" • ") || "-"}
+        </div>
+        <div class="subtitle" style="position:relative; margin-top: 6px;">
+          <b>Palpites:</b> ${guessesEntries.map(([n,v]) => `${n}: ${v}`).join(" • ") || "-"}
+        </div>
       `;
-      box.appendChild(card);
+
+      // segments (mãos)
+      const bar = card.querySelector(".stackBar");
+      const label = card.querySelector(".stackLabel");
+
+      if (total > 0 && handsEntries.length){
+        let sumPct = 0;
+        handsEntries.forEach(([name, val], idx) => {
+          const pct = Math.round((Number(val) / total) * 100);
+          sumPct += pct;
+          const seg = document.createElement("div");
+          seg.className = "seg";
+          seg.style.background = colorForName(name);
+          seg.style.width = `${pct}%`;
+          seg.style.float = "left";
+          bar.appendChild(seg);
+
+          const li = document.createElement("span");
+          li.className = "legendItem";
+          li.innerHTML = `<span class="swatch" style="background:${colorForName(name)}"></span>${name}: ${val}`;
+          label.appendChild(li);
+        });
+
+        // ajuste de arredondamento (pra fechar 100%)
+        const fix = 100 - sumPct;
+        if (fix !== 0 && bar.firstElementChild){
+          const last = bar.lastElementChild;
+          const w = parseInt(last.style.width || "0", 10);
+          last.style.width = `${Math.max(0, w + fix)}%`;
+        }
+      } else {
+        label.textContent = "Sem mãos registradas.";
+      }
+
+      // guesses chips
+      const gRow = card.querySelector(".guessesRow");
+      if (!guessesEntries.length){
+        const g = document.createElement("span");
+        g.className = "gChip";
+        g.textContent = "— sem palpites";
+        gRow.appendChild(g);
+      } else {
+        guessesEntries.forEach(([name, val]) => {
+          const g = document.createElement("span");
+          const isCorrect = total === Number(val);
+          g.className = "gChip" + (isCorrect ? " correct" : "");
+          g.textContent = `${name}: ${val}`;
+          gRow.appendChild(g);
+        });
+      }
+
+      tl.appendChild(card);
     }
+
+    // auto-scroll pra direita (última rodada)
+    wrap.scrollLeft = wrap.scrollWidth;
   }
 
   function pushRevealToHistory(revealMsg){
     if (!revealMsg || !revealMsg.result) return;
     const r = revealMsg.result;
-
     matchHistory.push({
       round_num: r.round_num,
       total: r.total,
@@ -605,7 +793,6 @@
       hands: r.hands || {},
       guesses: r.guesses || {}
     });
-
     while (matchHistory.length > MAX_HISTORY) matchHistory.shift();
     renderHistory();
   }
@@ -634,7 +821,6 @@
     renderOrderBar(s);
     renderPlayers(s);
 
-    // minha mão
     $("myHandPill").textContent = `minha mão: ${myLastHand ?? "-"}`;
 
     const me = you();
@@ -681,7 +867,7 @@
       const maxHand = Math.min(3, me.balls_left);
       $("hand").max = String(maxHand);
       $("hand").value = "0";
-      renderHandQuick(maxHand); // ✅ 0..3 voltou
+      renderHandQuick(maxHand);
       showBoxes({ hand: true });
       return;
     }
@@ -710,7 +896,7 @@
       : "Revelando resultado...";
   }
 
-  // ===== WS =====
+  // ===== WS helpers
   function stopPing(){
     if (pingTimer) { clearInterval(pingTimer); pingTimer = null; }
   }
@@ -721,13 +907,46 @@
     }, 20000);
   }
 
-  function connect() {
+  function scheduleReconnect(){
+    if (reconnectTimer) return;
+    const room = currentRoom();
+    if (!room) return;
+
+    reconnectAttempts += 1;
+    const capped = Math.min(6, reconnectAttempts - 1);
+    const delay = Math.min(15000, 900 * Math.pow(2, capped)); // 0.9s, 1.8s, 3.6s... até 15s
+    const sec = Math.max(1, Math.round(delay / 1000));
+
+    setHint(`Conexão caiu. Reconectando em ${sec}s... (tentativa ${reconnectAttempts})`);
+
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = null;
+      if (ws && (ws.readyState === 0 || ws.readyState === 1)) return;
+      connect(true);
+    }, delay);
+  }
+
+  function connect(isAuto=false) {
     setError("");
-    setHint("");
+
+    // limpa timer de reconexão se foi clique manual
+    if (!isAuto) {
+      if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+      reconnectAttempts = 0;
+    }
 
     const name = ($("name").value || "Jogador").trim();
     const room = currentRoom();
     if (!room) { setError("Informe uma sala ou clique em Criar sala."); return; }
+
+    // guarda nome local
+    try { localStorage.setItem("bolinhas:last_name", name); } catch {}
+
+    // evita duplicar sockets
+    if (ws && (ws.readyState === 0 || ws.readyState === 1)) {
+      if (!isAuto) setHint("Você já está conectado.");
+      return;
+    }
 
     const storedKey = localStorage.getItem(roomKeyStorageKey(room));
     const keyParam = storedKey ? `&key=${encodeURIComponent(storedKey)}` : "";
@@ -740,18 +959,22 @@
 
     ws.onopen = () => {
       setConnected(true);
-      setHint(`Conectado na sala ${room}.`);
-      reconnectAttempts = 0;
       startPing();
+      reconnectAttempts = 0;
+      if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+      setHint(`Conectado na sala ${room}.`);
     };
 
     ws.onclose = () => {
       setConnected(false);
       stopPing();
-      if (!manualClose) setHint("Desconectado. Clique em Conectar de novo.");
+      if (!manualClose) scheduleReconnect();
     };
 
-    ws.onerror = () => setError("Erro no WebSocket.");
+    ws.onerror = () => {
+      setError("Erro no WebSocket.");
+      // deixa o onclose cuidar do reconnect
+    };
 
     ws.onmessage = (ev) => {
       const msg = JSON.parse(ev.data);
@@ -770,9 +993,7 @@
       if (msg.type === "state") { renderState(msg.state); return; }
 
       if (msg.type === "reveal") {
-        // ✅ telinha 10 segundos (fim de rodada) — voltou
         showRoundOverlay(msg.result);
-        // painel
         pushRevealToHistory(msg);
         return;
       }
@@ -792,7 +1013,7 @@
     ws.send(JSON.stringify({ type, ...payload }));
   }
 
-  // ===== Chat =====
+  // ===== Chat UI
   function addChatLine(name, text, ts){
     const box = $("chatLog");
     const d = document.createElement("div");
@@ -813,7 +1034,7 @@
       .replaceAll("'","&#039;");
   }
 
-  // ===== UI binds =====
+  // ===== Binds
   $("create").onclick = async () => {
     setError("");
     const res = await fetch("/api/create-room");
@@ -823,7 +1044,7 @@
     setHint(`Sala criada: ${data.room_id}. Clique em Conectar.`);
   };
 
-  $("connect").onclick = () => connect();
+  $("connect").onclick = () => connect(false);
 
   $("copyLink").onclick = async () => {
     const room = currentRoom();
@@ -841,7 +1062,7 @@
 
   $("sendHand").onclick = () => {
     const v = parseInt($("hand").value || "0", 10);
-    myLastHand = v; // ✅ cada jogador enxerga sua mão
+    myLastHand = v;
     $("myHandPill").textContent = `minha mão: ${myLastHand}`;
     send("hand", { value: v });
     $("handAck").textContent = "Mão enviada ✅";
@@ -874,6 +1095,19 @@
   window.addEventListener("load", () => {
     const hash = (location.hash || "").replace("#", "").trim().toUpperCase();
     if (hash) $("room").value = hash;
+
+    // restaura nome
+    try {
+      const last = localStorage.getItem("bolinhas:last_name");
+      if (last && !$("name").value) $("name").value = last;
+    } catch {}
+
+    // ✅ reconecta sozinho se tiver sala no hash ou sala preenchida e tiver key salva
+    const room = currentRoom();
+    if (room) {
+      const storedKey = localStorage.getItem(roomKeyStorageKey(room));
+      if (storedKey) connect(true);
+    }
   });
 </script>
 </body>

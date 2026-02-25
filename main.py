@@ -13,9 +13,6 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 
-# =========================
-# Helpers
-# =========================
 def now_ts() -> int:
     return int(time.time())
 
@@ -29,9 +26,6 @@ def gen_id(n: int = 16) -> str:
     return secrets.token_hex(n // 2)
 
 
-# =========================
-# Models
-# =========================
 @dataclass
 class Player:
     player_id: str
@@ -59,7 +53,6 @@ class Room:
     prize: str = ""
     join_order: List[str] = field(default_factory=list)
 
-    # round state
     round_order: List[str] = field(default_factory=list)
     turn_idx: int = 0
     hands: Dict[str, int] = field(default_factory=dict)
@@ -72,12 +65,7 @@ class Room:
 rooms: Dict[str, Room] = {}
 rooms_lock = asyncio.Lock()
 
-
-# =========================
-# FastAPI
-# =========================
 app = FastAPI()
-
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
@@ -96,11 +84,7 @@ async def create_room():
     return JSONResponse({"room_id": rid})
 
 
-# =========================
-# State serialization
-# =========================
 def room_state(room: Room) -> dict:
-    # round_order as list of {player_id, name}
     ro = []
     for pid in room.round_order:
         p = room.players.get(pid)
@@ -167,7 +151,6 @@ async def _send_error(ws: WebSocket, message: str):
 def _ensure_host(room: Room):
     if room.host_player_id in room.players:
         return
-    # pick first connected/alive, else any
     for pid in room.join_order:
         if pid in room.players and room.players[pid].connected:
             room.host_player_id = pid
@@ -199,9 +182,6 @@ def _build_round_order(room: Room):
         room.round_order = []
         room.turn_idx = 0
         return
-
-    # rotate first player each round
-    # pick start based on round_num
     start = (room.round_num - 1) % len(alive) if room.round_num > 0 else 0
     room.round_order = alive[start:] + alive[:start]
     room.turn_idx = 0
@@ -251,9 +231,6 @@ def _game_over(room: Room) -> Optional[dict]:
     return None
 
 
-# =========================
-# WebSocket
-# =========================
 @app.websocket("/ws/{room_id}")
 async def ws_room(ws: WebSocket, room_id: str, name: str = "Jogador", key: str = ""):
     await ws.accept()
@@ -268,13 +245,11 @@ async def ws_room(ws: WebSocket, room_id: str, name: str = "Jogador", key: str =
             await ws.close()
             return
 
-        # reconnect by key
         if key:
             for p in room.players.values():
                 if p.key == key:
                     p.ws = ws
                     p.connected = True
-                    # keep name from query (optional)
                     if name:
                         p.name = name
                     await _safe_send(ws, {"type": "joined", "player_id": p.player_id, "room_id": room.room_id, "player_key": p.key})
@@ -287,7 +262,6 @@ async def ws_room(ws: WebSocket, room_id: str, name: str = "Jogador", key: str =
             player = None
 
         if player is None:
-            # new player
             if len(room.players) >= 10:
                 await _send_error(ws, "Sala cheia (máx 10).")
                 await ws.close()
@@ -333,21 +307,17 @@ async def ws_room(ws: WebSocket, room_id: str, name: str = "Jogador", key: str =
                     await ws.close()
                     return
 
-                # player can disappear (kicked)
                 if player.player_id not in room.players:
                     await _send_error(ws, "Você foi removido da sala.")
                     await ws.close()
                     return
 
-                # refresh reference
                 player = room.players[player.player_id]
 
-                # keepalive
                 if mtype == "ping":
                     await _safe_send(ws, {"type": "pong"})
                     continue
 
-                # chat
                 if mtype == "chat":
                     text = (msg.get("text") or "").strip()
                     if not text:
@@ -359,7 +329,6 @@ async def ws_room(ws: WebSocket, room_id: str, name: str = "Jogador", key: str =
                             await _safe_send(p.ws, payload)
                     continue
 
-                # react
                 if mtype == "react":
                     emoji = (msg.get("emoji") or "").strip()
                     if emoji not in ("🙂", "😭", "😡", ""):
@@ -368,13 +337,11 @@ async def ws_room(ws: WebSocket, room_id: str, name: str = "Jogador", key: str =
                     await _broadcast_state(room)
                     continue
 
-                # host-only controls
                 if mtype in ("start", "restart", "skip", "pause", "set_prize", "kick"):
                     if room.host_player_id != player.player_id:
                         await _send_error(ws, "Só o host pode fazer isso.")
                         continue
 
-                # ✅ kick (expulsar)
                 if mtype == "kick":
                     target_id = (msg.get("target_id") or "").strip()
                     if not target_id or target_id not in room.players:
@@ -389,14 +356,12 @@ async def ws_room(ws: WebSocket, room_id: str, name: str = "Jogador", key: str =
                     target = room.players.get(target_id)
                     tws = target.ws if target else None
 
-                    # limpar round state
                     room.hands.pop(target_id, None)
                     room.guesses.pop(target_id, None)
                     room.round_order = [pid for pid in room.round_order if pid != target_id]
                     if room.turn_idx >= len(room.round_order):
                         room.turn_idx = 0
 
-                    # remove
                     if target_id in room.join_order:
                         room.join_order.remove(target_id)
                     room.players.pop(target_id, None)
@@ -424,11 +389,9 @@ async def ws_room(ws: WebSocket, room_id: str, name: str = "Jogador", key: str =
                     continue
 
                 if mtype == "restart":
-                    # reset full game
                     room.phase = "lobby"
                     room.round_num = 0
                     room.paused = False
-                    room.prize = room.prize  # mantém
                     for p in room.players.values():
                         p.alive = True
                         p.balls_left = 3
@@ -461,14 +424,12 @@ async def ws_room(ws: WebSocket, room_id: str, name: str = "Jogador", key: str =
                     await _broadcast_state(room)
                     continue
 
-                # gameplay blocked if paused/over/lobby
                 if room.paused:
                     continue
 
                 if room.phase not in ("hands", "guesses"):
                     continue
 
-                # must be your turn (turn-based)
                 if not room.round_order:
                     continue
                 turn_pid = room.round_order[room.turn_idx]
@@ -488,7 +449,6 @@ async def ws_room(ws: WebSocket, room_id: str, name: str = "Jogador", key: str =
                     room.hands[player.player_id] = value
                     player.hand_submitted = True
 
-                    # next turn or phase swap
                     if _all_submitted(room, "hands"):
                         room.phase = "guesses"
                         room.turn_idx = 0
@@ -519,7 +479,6 @@ async def ws_room(ws: WebSocket, room_id: str, name: str = "Jogador", key: str =
                     player.guess_submitted = True
 
                     if _all_submitted(room, "guesses"):
-                        # reveal
                         total = sum(room.hands.get(pid, 0) for pid in room.round_order)
                         winners = _winner_names(room, total)
 
@@ -535,7 +494,6 @@ async def ws_room(ws: WebSocket, room_id: str, name: str = "Jogador", key: str =
                             "winners": winners if len(winners) != 1 else [],
                         }
 
-                        # broadcast reveal
                         payload = {"type": "reveal", "result": result, "game_over": game_over}
                         for p in list(room.players.values()):
                             if p.ws and p.connected:
@@ -544,7 +502,6 @@ async def ws_room(ws: WebSocket, room_id: str, name: str = "Jogador", key: str =
                         if game_over:
                             room.phase = "over"
                         else:
-                            # next round
                             room.round_num += 1
                             room.phase = "hands"
                             _reset_round(room)
