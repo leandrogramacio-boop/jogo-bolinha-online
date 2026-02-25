@@ -44,7 +44,7 @@
     .row{ display:flex; gap: 12px; flex-wrap: wrap; align-items: end; }
     label{ font-size: 12px; color: var(--muted); display:inline-block; margin-bottom: 6px; }
 
-    input, button, textarea{
+    input, button{
       padding: 10px 12px;
       font-size: 16px;
       border-radius: 12px;
@@ -54,14 +54,12 @@
       outline: none;
     }
     input{ min-width: 220px; }
-    textarea{ width: 100%; min-height: 42px; resize: vertical; }
 
     button{
       cursor: pointer;
       background: rgba(255,255,255,0.08);
       transition: transform .06s ease, background .12s ease, border-color .12s ease;
       user-select: none;
-      white-space: nowrap;
     }
     button:hover{ background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.18); }
     button:active{ transform: translateY(1px); }
@@ -83,7 +81,6 @@
     .hint{ color: var(--muted); margin: 8px 0 0; font-size: 13px; }
     .sep{ height:1px; background: rgba(255,255,255,0.10); margin: 12px 0; }
 
-    /* Ordem da rodada */
     .orderBar{
       display:flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; align-items:center;
     }
@@ -99,10 +96,7 @@
       align-items:center;
       white-space: nowrap;
     }
-    .chip .miniDot{
-      width: 8px; height: 8px; border-radius: 999px;
-      background: rgba(255,255,255,0.25);
-    }
+    .chip .miniDot{ width: 8px; height: 8px; border-radius: 999px; background: rgba(255,255,255,0.25); }
     .chip.turn{
       background: rgba(245,158,11,0.18);
       border-color: rgba(245,158,11,0.30);
@@ -110,7 +104,6 @@
     }
     .chip.turn .miniDot{ background: var(--warn); }
 
-    /* Players grid */
     .playersGrid{ display:grid; gap: 10px; }
     .playerRow{
       display:grid;
@@ -162,226 +155,52 @@
     }
     .barFill{ height: 100%; width: 0%; background: rgba(255,255,255,0.85); transition: width .35s ease; }
 
-    /* Ações */
     .actionsBox p{ margin: 8px 0; color: var(--muted); }
     .quick{ display:flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
     .quick button{ font-size: 13px; padding: 8px 10px; border-radius: 999px; }
 
-    .rollingBox{
-      margin-top: 10px;
-      border: 1px solid rgba(255,255,255,0.10);
-      background: rgba(0,0,0,0.18);
-      border-radius: 14px;
-      padding: 12px;
-    }
-    .rollingHead{
-      display:flex;
-      gap: 10px;
-      align-items:center;
-      justify-content: space-between;
-      margin-bottom: 8px;
-    }
-    .rollingTitle{ font-weight: 800; }
-    .rollingText{ color: rgba(255,255,255,0.86); font-size: 14px; }
-
-    /* Painel partida (bonito Timeline/Mapa) */
-    .tabs{ display:flex; gap: 10px; flex-wrap: wrap; align-items:center; margin-top: 6px; }
-    .tabBtn{
-      padding: 8px 10px;
-      border-radius: 999px;
-      font-size: 13px;
-      border: 1px solid rgba(255,255,255,0.12);
-      background: rgba(255,255,255,0.07);
-      color: rgba(255,255,255,0.86);
-    }
-    .tabBtn.active{
-      background: rgba(255,255,255,0.12);
-      border-color: rgba(255,255,255,0.20);
-    }
-
-    .timelineWrap{ margin-top: 12px; overflow-x: auto; padding-bottom: 6px; }
-    .timeline{ display:flex; gap: 12px; min-height: 240px; }
-    .roundCard{
-      width: 340px;
-      flex: 0 0 auto;
-      border-radius: 16px;
-      border: 1px solid rgba(255,255,255,0.12);
-      background: rgba(255,255,255,0.06);
-      padding: 12px;
-      position: relative;
-      overflow: hidden;
-    }
-    .roundCard::before{
-      content:"";
-      position:absolute;
-      inset:0;
-      background: radial-gradient(700px 120px at 20% 20%, rgba(59,130,246,0.18), transparent 60%),
-                  radial-gradient(700px 120px at 90% 30%, rgba(245,158,11,0.16), transparent 60%);
-      opacity: .8;
-      pointer-events:none;
-    }
-    .roundHead{
-      position: relative;
-      display:flex;
-      gap: 10px;
-      align-items: start;
-      justify-content: space-between;
-    }
-    .roundTitle{ font-weight: 800; letter-spacing: .2px; }
-    .roundMeta{ color: var(--muted); font-size: 12px; margin-top: 2px; }
-    .badge{
-      position: relative;
-      display:inline-flex;
-      align-items:center;
-      gap: 6px;
-      padding: 6px 10px;
-      border-radius: 999px;
+    /* ✅ Expulsar (host) - voltou */
+    .kickBtn{
       font-size: 12px;
-      border: 1px solid rgba(255,255,255,0.12);
-      background: rgba(0,0,0,0.20);
-      color: rgba(255,255,255,0.90);
-      white-space: nowrap;
-    }
-    .badge.good{ border-color: rgba(34,197,94,0.25); background: rgba(34,197,94,0.12); }
-    .badge.none{ border-color: rgba(148,163,184,0.18); background: rgba(148,163,184,0.10); }
-
-    .stackBar{
-      position: relative;
-      margin-top: 10px;
-      height: 16px;
+      padding: 7px 10px;
       border-radius: 999px;
-      background: rgba(255,255,255,0.08);
-      border: 1px solid rgba(255,255,255,0.10);
-      overflow: hidden;
-      box-shadow: inset 0 6px 16px rgba(0,0,0,0.20);
+      border: 1px solid rgba(239,68,68,0.25);
+      background: rgba(239,68,68,0.12);
+      color: rgba(255,255,255,0.92);
     }
-    .seg{ height: 100%; width: 0%; float: left; transition: width .5s ease; }
-    .stackLabel{
-      position: relative;
-      margin-top: 6px;
-      display:flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      align-items:center;
-      color: var(--muted);
-      font-size: 12px;
-    }
-    .legendItem{ display:inline-flex; align-items:center; gap: 6px; white-space: nowrap; }
-    .swatch{
-      width: 10px;
-      height: 10px;
-      border-radius: 999px;
-      background: rgba(255,255,255,0.40);
-      border: 1px solid rgba(255,255,255,0.20);
-    }
+    .kickBtn:hover{ border-color: rgba(239,68,68,0.35); background: rgba(239,68,68,0.18); }
 
-    .guessesRow{
-      position: relative;
-      margin-top: 10px;
-      display:flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      align-items:center;
+    /* ✅ Overlay 10s (fim da rodada) - voltou */
+    .roundOverlay{
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      z-index: 80;
     }
-    .gChip{
-      padding: 6px 10px;
-      border-radius: 999px;
-      border: 1px solid rgba(255,255,255,0.12);
-      background: rgba(0,0,0,0.18);
-      font-size: 12px;
-      color: rgba(255,255,255,0.90);
-      display:inline-flex;
-      align-items:center;
-      gap: 8px;
-      white-space: nowrap;
+    .roundOverlay.show{ display:flex; }
+    .roundModal{
+      width: min(520px, 100%);
+      background: rgba(20, 20, 24, 0.88);
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 18px;
+      padding: 16px 16px 14px;
+      box-shadow: 0 30px 80px rgba(0,0,0,0.55);
+      backdrop-filter: blur(12px);
     }
-    .gChip.correct{
-      border-color: rgba(34,197,94,0.35);
-      background: rgba(34,197,94,0.14);
-      box-shadow: 0 0 0 3px rgba(34,197,94,0.10);
+    .roundModal h3{ margin: 0 0 6px; }
+    .roundModal .big{
+      font-size: 36px;
+      font-weight: 900;
+      margin: 6px 0 6px;
     }
-
-    .snapRow{ position: relative; margin-top: 10px; display:grid; gap: 6px; }
-    .snapLine{
-      display:flex;
-      align-items:center;
-      justify-content: space-between;
-      gap: 10px;
-      color: rgba(255,255,255,0.86);
-      font-size: 12px;
-    }
-    .snapName{
-      max-width: 160px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      color: rgba(255,255,255,0.86);
-    }
-    .miniBalls{ display:inline-flex; gap: 4px; align-items:center; }
-    .miniBall{
-      width: 9px; height: 9px;
-      border-radius: 999px;
-      border: 1px solid rgba(255,255,255,0.45);
-      background: transparent;
-    }
-    .miniBall.on{ background: rgba(255,255,255,0.92); }
-
-    .heatWrap{
-      margin-top: 12px;
-      border-radius: 14px;
-      border: 1px solid rgba(255,255,255,0.10);
-      background: rgba(0,0,0,0.18);
-      overflow: hidden;
-    }
-    #heatCanvas{ width: 100%; height: 320px; display:block; }
-    .legend{
-      display:flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      align-items:center;
-      color: var(--muted);
-      font-size: 12px;
-      margin-top: 10px;
-    }
-    .legendBar{
-      width: 180px; height: 10px;
-      border-radius: 999px;
-      border: 1px solid rgba(255,255,255,0.10);
-      background: linear-gradient(90deg,
-        rgba(34,197,94,0.90),
-        rgba(245,158,11,0.90),
-        rgba(239,68,68,0.90)
-      );
-    }
-
-    /* Chat */
-    .chatLog{
-      margin-top: 10px;
-      border: 1px solid rgba(255,255,255,0.10);
-      background: rgba(0,0,0,0.18);
-      border-radius: 14px;
-      padding: 12px;
-      max-height: 320px;
-      overflow: auto;
-      display:grid;
-      gap: 8px;
-    }
-    .chatMsg{
-      border: 1px solid rgba(255,255,255,0.10);
-      background: rgba(255,255,255,0.05);
-      border-radius: 12px;
-      padding: 10px 12px;
-    }
-    .chatMeta{ color: var(--muted); font-size: 12px; display:flex; gap: 8px; align-items:center; flex-wrap: wrap; }
-    .chatText{ margin-top: 4px; color: rgba(255,255,255,0.92); white-space: pre-wrap; word-break: break-word; }
-    .reactRow{ display:flex; gap: 8px; flex-wrap: wrap; align-items:center; }
-    .reactBtn{ font-size: 18px; padding: 8px 10px; border-radius: 12px; }
 
     @media (max-width: 680px){
       input{ min-width: 160px; width: 100%; }
       .barWrap{ width: 140px; }
-      #heatCanvas{ height: 280px; }
-      .roundCard{ width: 300px; }
     }
   </style>
 </head>
@@ -389,11 +208,8 @@
 <body>
   <div class="wrap">
     <h1>🎱 Jogo das Bolinhas (Online)</h1>
-    <p class="subtitle">
-      Chat + mão pessoal + pause + prêmio + painel Timeline/Mapa ✅
-    </p>
+    <p class="subtitle">Tudo online, com host controls e UI moderna ✅</p>
 
-    <!-- CARD TOPO (controle / premio / status) -->
     <div class="card">
       <div class="row">
         <div>
@@ -415,7 +231,7 @@
         <button id="start" disabled>Iniciar (host)</button>
         <button id="restart" disabled>Reiniciar (host)</button>
         <button id="skip" disabled>Pular vez (host)</button>
-        <button id="pauseBtn" disabled>Pausar (host)</button>
+        <button id="pause" disabled>Pausar (host)</button>
 
         <div class="pills">
           <span class="pill"><span class="dot off" id="connDot"></span> <span id="connStatus">Desconectado</span></span>
@@ -427,34 +243,27 @@
         </div>
       </div>
 
-      <div class="orderBar" id="orderBar"></div>
-
-      <!-- ✅ PRÊMIO NO TOPO (como você pediu) -->
-      <div class="row" style="margin-top:10px; align-items:center;">
-        <span class="pill" id="prizePillTop">Prêmio: -</span>
-
-        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:end;">
-          <div>
-            <label>Prêmio / Perdedor paga (host define)</label><br/>
-            <input id="prizeInput" placeholder="ex: Pizza / Refrigerante / R$ 10" />
-          </div>
-          <button id="setPrizeBtn" disabled>Definir (host)</button>
+      <div class="row" style="align-items:center; margin-top:10px;">
+        <div style="flex:1;">
+          <label>Prêmio / Perdedor paga (host define, todo mundo vê)</label><br/>
+          <input id="prizeInput" placeholder="Ex: Pizza / Refri / 10zão" />
         </div>
+        <button id="setPrize" disabled>Definir (host)</button>
       </div>
+
+      <div class="orderBar" id="orderBar"></div>
 
       <p id="err" class="error"></p>
       <p id="hint" class="hint"></p>
     </div>
 
-    <!-- AÇÕES -->
     <div class="card actionsBox">
       <h3 style="margin:0 0 8px;">Ações</h3>
 
-      <!-- pills “minha mão / prêmio / jogador da vez” -->
-      <div class="pills" style="margin-bottom:10px;">
+      <div class="pills" style="margin: 8px 0 10px;">
         <span class="pill" id="myHandPill">minha mão: -</span>
-        <span class="pill" id="prizePillActions">prêmio: -</span>
-        <span class="pill" id="turnPillActions">jogador da vez: -</span>
+        <span class="pill" id="prizePill">prêmio: -</span>
+        <span class="pill" id="turnPill2">jogador da vez: -</span>
       </div>
 
       <div id="handBox" style="display:none;">
@@ -464,7 +273,6 @@
           <button id="sendHand">Enviar mão</button>
           <span id="handAck" style="color: var(--good); font-weight: 650;"></span>
         </div>
-        <!-- ✅ recomendações 0/1/2/3 -->
         <div class="quick" id="handQuick"></div>
       </div>
 
@@ -477,86 +285,62 @@
         </div>
       </div>
 
+      <div style="margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.10); padding-top: 10px;">
+        <div style="display:flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items:center;">
+          <b>Palpites rolando</b>
+          <span class="subtitle" style="margin:0;">(atualiza em tempo real)</span>
+        </div>
+        <div class="subtitle" id="usedGuesses" style="margin-top:6px;">—</div>
+      </div>
+
       <div id="waitingBox" style="display:none;">
         <p class="subtitle" id="waitingText">Aguardando...</p>
       </div>
-
-      <!-- ✅ Palpites sempre visíveis -->
-      <div class="rollingBox">
-        <div class="rollingHead">
-          <div class="rollingTitle">Palpites rolando</div>
-          <div class="subtitle" style="margin:0;">(tempo real)</div>
-        </div>
-        <div class="rollingText" id="rollingGuesses">—</div>
-      </div>
     </div>
 
-    <!-- JOGADORES -->
     <div class="card">
       <h3 style="margin:0 0 8px;">Jogadores</h3>
       <div id="players" class="playersGrid"></div>
     </div>
 
-    <!-- ✅ PAINEL DA PARTIDA (bonito) - DEPOIS dos jogadores -->
-    <div class="card">
-      <div class="row" style="align-items:center; justify-content: space-between;">
-        <div>
-          <h3 style="margin:0 0 6px;">Painel da Partida</h3>
-          <p class="subtitle" style="margin:0;">Timeline e Mapa (enquanto a página estiver aberta).</p>
-        </div>
-        <div class="tabs">
-          <button class="tabBtn active" id="tabTimeline">Timeline</button>
-          <button class="tabBtn" id="tabHeat">Mapa</button>
-          <button class="tabBtn" id="clearPanel">Limpar</button>
-        </div>
-      </div>
-
-      <div id="timelineMode">
-        <div class="timelineWrap">
-          <div class="timeline" id="timeline"></div>
-        </div>
-        <p class="subtitle" style="margin-top:8px;">
-          Cada card é uma rodada: mãos (barra), palpites e bolinhas após.
-        </p>
-      </div>
-
-      <div id="heatMode" style="display:none;">
-        <div class="heatWrap">
-          <canvas id="heatCanvas" width="1000" height="320"></canvas>
-        </div>
-        <div class="legend">
-          <span>0 bolinhas</span>
-          <div class="legendBar"></div>
-          <span>3 bolinhas</span>
-          <span class="subtitle" style="margin:0;">(verde = perto de sair • vermelho = longe)</span>
-        </div>
+    <!-- Painel da Partida (fica em baixo dos jogadores) -->
+    <div class="card" id="panelCard">
+      <h3 style="margin:0 0 8px;">Painel da Partida</h3>
+      <p class="subtitle" style="margin:0 0 10px;">Histórico por rodada (enquanto a página estiver aberta).</p>
+      <div id="roundHistory" style="display:grid; gap:10px;">
+        <p class="subtitle" style="margin:0;">Sem rodadas ainda.</p>
       </div>
     </div>
 
-    <!-- ✅ CHAT DO JOGO - logo embaixo do painel -->
+    <!-- Chat (abaixo do painel) -->
     <div class="card">
-      <div class="row" style="align-items:center; justify-content: space-between;">
-        <div>
-          <h3 style="margin:0 0 6px;">Chat do Jogo</h3>
-          <p class="subtitle" style="margin:0;">Conversa da sala + reações.</p>
-        </div>
-        <div class="reactRow">
-          <button class="reactBtn" id="reactSmile" title="Reagir com 😊">😊</button>
-          <button class="reactBtn" id="reactCry" title="Reagir com 😭">😭</button>
-          <button class="reactBtn" id="reactAngry" title="Reagir com 😡">😡</button>
-        </div>
+      <h3 style="margin:0 0 8px;">Chat da Sala</h3>
+      <div id="chatLog" style="
+        height: 220px;
+        overflow:auto;
+        border: 1px solid rgba(255,255,255,0.10);
+        background: rgba(0,0,0,0.18);
+        border-radius: 14px;
+        padding: 10px;
+      "></div>
+      <div class="row" style="margin-top:10px;">
+        <input id="chatMsg" placeholder="Digite sua mensagem..." style="flex:1; min-width: 220px;"/>
+        <button id="sendChat">Enviar</button>
+        <button id="rSmile" title="🙂">🙂</button>
+        <button id="rCry" title="😭">😭</button>
+        <button id="rAngry" title="😡">😡</button>
       </div>
+      <p class="subtitle" style="margin:10px 0 0;">Dica: reações aparecem ao lado do seu nome.</p>
+    </div>
+  </div>
 
-      <div class="chatLog" id="chatLog"></div>
-
-      <div class="row" style="margin-top:10px; align-items:end;">
-        <div style="flex: 1;">
-          <label>Mensagem</label><br/>
-          <input id="chatInput" placeholder="manda a braba..." style="width:100%;" />
-        </div>
-        <button id="chatSend">Enviar</button>
-      </div>
-      <p class="subtitle" id="chatHint" style="margin-top:8px;">—</p>
+  <!-- ✅ Overlay 10s no fim de cada rodada -->
+  <div class="roundOverlay" id="roundOverlay">
+    <div class="roundModal" role="dialog" aria-modal="true" aria-label="Resultado da rodada">
+      <h3 id="ovTitleRound">Resultado</h3>
+      <div class="big" id="ovWinnerRound">—</div>
+      <p class="subtitle" id="ovDetailRound" style="margin:0;">—</p>
+      <p class="subtitle" id="ovCountdownRound" style="margin:10px 0 0;">Fechando em 10s...</p>
     </div>
   </div>
 
@@ -570,76 +354,102 @@
   // keepalive
   let pingTimer = null;
 
-  // reconexão simples
+  // reconexão
   let reconnectTimer = null;
   let reconnectAttempts = 0;
   let manualClose = false;
 
-  // Painel
-  const rounds = [];
-  const maxRounds = 25;
+  // UI extras
+  let myLastHand = null;
 
-  function setError(msg=""){ $("err").textContent = msg; }
-  function setHint(msg=""){ $("hint").textContent = msg; }
+  // painel
+  const matchHistory = []; // [{ round_num, total, winner(s), hands, guesses }]
+  const MAX_HISTORY = 40;
 
-  function roomKeyStorageKey(roomId){ return `bolinhas:key:${roomId}`; }
-  function currentRoom(){ return ($("room").value || "").trim().toUpperCase(); }
-  function setConnected(ok){
+  // ✅ Overlay 10s (fim da rodada) — voltou
+  const OVERLAY_MS = 10000;
+  let ovTimer = null;
+  let ovInterval = null;
+
+  function closeRoundOverlay(){
+    $("roundOverlay").classList.remove("show");
+    if (ovTimer) { clearTimeout(ovTimer); ovTimer = null; }
+    if (ovInterval) { clearInterval(ovInterval); ovInterval = null; }
+  }
+
+  function showRoundOverlay(result){
+    const winners = (result.winners && result.winners.length) ? result.winners : [];
+    const oneWinner = result.winner || (winners.length === 1 ? winners[0] : null);
+
+    $("ovTitleRound").textContent = `Rodada ${result.round_num} — Resultado`;
+    if (oneWinner){
+      $("ovWinnerRound").textContent = `🏆 ${oneWinner}`;
+      $("ovDetailRound").textContent = `Acertou o total (${result.total}) e perde 1 bolinha.`;
+    } else if (winners.length > 1){
+      $("ovWinnerRound").textContent = `🏆 ${winners.join(", ")}`;
+      $("ovDetailRound").textContent = `Acertaram o total (${result.total}) e perdem 1 bolinha.`;
+    } else {
+      $("ovWinnerRound").textContent = `😅 Ninguém acertou`;
+      $("ovDetailRound").textContent = `Total da rodada: ${result.total}.`;
+    }
+
+    $("roundOverlay").classList.add("show");
+
+    let left = Math.ceil(OVERLAY_MS / 1000);
+    $("ovCountdownRound").textContent = `Fechando em ${left}s...`;
+
+    if (ovInterval) clearInterval(ovInterval);
+    ovInterval = setInterval(() => {
+      left--;
+      if (left < 0) left = 0;
+      $("ovCountdownRound").textContent = `Fechando em ${left}s...`;
+    }, 1000);
+
+    if (ovTimer) clearTimeout(ovTimer);
+    ovTimer = setTimeout(() => closeRoundOverlay(), OVERLAY_MS);
+  }
+
+  $("roundOverlay").onclick = (e) => {
+    if (e.target === $("roundOverlay")) closeRoundOverlay();
+  };
+
+  // ===== util =====
+  function setError(msg = "") { $("err").textContent = msg; }
+  function setHint(msg = "") { $("hint").textContent = msg; }
+
+  function roomKeyStorageKey(roomId) { return `bolinhas:key:${roomId}`; }
+  function currentRoom() { return ($("room").value || "").trim().toUpperCase(); }
+  function setConnected(ok) {
     $("connStatus").textContent = ok ? "Conectado" : "Desconectado";
     $("connDot").className = `dot ${ok ? "on" : "off"}`;
   }
 
-  function showBoxes({ hand=false, guess=false, waiting=false } = {}){
+  function showBoxes({ hand=false, guess=false, waiting=false } = {}) {
     $("handBox").style.display = hand ? "block" : "none";
     $("guessBox").style.display = guess ? "block" : "none";
     $("waitingBox").style.display = waiting ? "block" : "none";
   }
 
-  function you(){
-    if(!state || !playerId) return null;
+  function you() {
+    if (!state || !playerId) return null;
     return state.players.find(p => p.player_id === playerId) || null;
   }
-  function isHost(){ return state && playerId && state.host_player_id === playerId; }
-  function clamp(n,a,b){ return Math.max(a, Math.min(b,n)); }
+  function isHost() { return state && playerId && state.host_player_id === playerId; }
+  function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
 
-  // cores por nome (estável)
-  function colorForName(name){
-    let h = 0;
-    for(let i=0;i<name.length;i++) h = (h*31 + name.charCodeAt(i)) % 360;
-    return `hsl(${h}, 80%, 65%)`;
-  }
-
-  function ballsHTML(ballsLeft, maxBalls=3){
-    const wrap = document.createElement("span");
-    wrap.className = "balls";
-    for(let i=0;i<maxBalls;i++){
-      const b = document.createElement("span");
-      b.className = "ball" + (i < ballsLeft ? " filled" : "");
-      wrap.appendChild(b);
-    }
-    return wrap;
-  }
-  function miniBallsHTML(ballsLeft, maxBalls=3){
-    const wrap = document.createElement("span");
-    wrap.className = "miniBalls";
-    for(let i=0;i<maxBalls;i++){
-      const b = document.createElement("span");
-      b.className = "miniBall" + (i < ballsLeft ? " on" : "");
-      wrap.appendChild(b);
-    }
-    return wrap;
-  }
-
-  function renderOrderBar(s){
+  // ===== UI bits =====
+  function renderOrderBar(s) {
     const bar = $("orderBar");
     bar.innerHTML = "";
-    if(!s.round_order || !s.round_order.length || s.phase === "lobby"){
+
+    if (!s.round_order || !s.round_order.length || s.phase === "lobby") {
       const c = document.createElement("div");
       c.className = "chip";
       c.innerHTML = `<span class="miniDot"></span><span>Ordem: (ainda não começou)</span>`;
       bar.appendChild(c);
       return;
     }
+
     s.round_order.forEach((pl, idx) => {
       const chip = document.createElement("div");
       chip.className = "chip" + (pl.player_id === s.turn_player_id ? " turn" : "");
@@ -648,7 +458,18 @@
     });
   }
 
-  function renderPlayers(s){
+  function ballsHTML(ballsLeft, maxBalls = 3) {
+    const wrap = document.createElement("span");
+    wrap.className = "balls";
+    for (let i = 0; i < maxBalls; i++) {
+      const b = document.createElement("span");
+      b.className = "ball" + (i < ballsLeft ? " filled" : "");
+      wrap.appendChild(b);
+    }
+    return wrap;
+  }
+
+  function renderPlayers(s) {
     const list = $("players");
     list.innerHTML = "";
 
@@ -657,10 +478,10 @@
       row.className = "playerRow";
 
       const isTurn = (p.player_id === s.turn_player_id);
-      if(isTurn) row.classList.add("turnPlayer");
+      if (isTurn) row.classList.add("turnPlayer");
 
       const pct = clamp((p.balls_left / 3) * 100, 0, 100);
-      const react = p.reaction ? `${p.reaction} ` : "";
+      const reaction = p.reaction ? ` ${p.reaction}` : "";
 
       row.innerHTML = `
         <div>
@@ -681,7 +502,8 @@
         <div class="rightBox"></div>
       `;
 
-      row.querySelector("b").textContent = react + p.name + (p.player_id === playerId ? " (VOCÊ)" : "");
+      row.querySelector("b").textContent =
+        p.name + reaction + (p.player_id === playerId ? " (VOCÊ)" : "");
 
       const rb = row.querySelector(".rightBox");
       rb.appendChild(ballsHTML(p.balls_left, 3));
@@ -694,14 +516,26 @@
       barWrap.appendChild(barFill);
       rb.appendChild(barWrap);
 
+      // ✅ Expulsar (host) — voltou (só host e não em você)
+      if (isHost() && p.player_id !== playerId) {
+        const kick = document.createElement("button");
+        kick.className = "kickBtn";
+        kick.textContent = "Expulsar";
+        kick.onclick = () => {
+          const ok = confirm(`Remover "${p.name}" da sala?`);
+          if (ok) send("kick", { target_id: p.player_id });
+        };
+        rb.appendChild(kick);
+      }
+
       list.appendChild(row);
     });
   }
 
-  function renderHandQuick(maxHand){
+  function renderHandQuick(maxHand) {
     const q = $("handQuick");
     q.innerHTML = "";
-    for(let v=0; v<=3; v++){
+    for (let v = 0; v <= 3; v++) {
       const b = document.createElement("button");
       b.textContent = `${v}`;
       b.disabled = v > maxHand;
@@ -710,333 +544,116 @@
     }
   }
 
-  // palpites sempre visíveis
-  function renderRollingGuesses(s){
+  function renderGuessesRolling(s) {
+    // Mostra em qualquer fase o que já foi chegando (quando server mandar guesses_public)
     const gp = s.guesses_public || [];
-    if(gp.length){
-      $("rollingGuesses").textContent = gp.map(x => `${x.name}: ${x.guess}`).join("  •  ");
+    if (gp.length) {
+      $("usedGuesses").textContent = gp.map(x => `${x.name}: ${x.guess}`).join("  •  ");
       return;
     }
-    const used = s.used_guesses || [];
-    $("rollingGuesses").textContent = used.length ? used.join(", ") : "— (ninguém enviou palpite ainda)";
+    $("usedGuesses").textContent = (s.used_guesses || []).join(", ") || "— (ninguém enviou palpite ainda)";
   }
 
-  // ====== Painel Timeline/Mapa ======
-  function setTab(mode){
-    const tl = $("timelineMode");
-    const hm = $("heatMode");
-    const b1 = $("tabTimeline");
-    const b2 = $("tabHeat");
-    if(mode === "timeline"){
-      tl.style.display = "block";
-      hm.style.display = "none";
-      b1.classList.add("active");
-      b2.classList.remove("active");
-    } else {
-      tl.style.display = "none";
-      hm.style.display = "block";
-      b2.classList.add("active");
-      b1.classList.remove("active");
-      drawHeat();
-    }
-  }
-  $("tabTimeline").onclick = () => setTab("timeline");
-  $("tabHeat").onclick = () => setTab("heat");
+  function renderHistory(){
+    const box = $("roundHistory");
+    box.innerHTML = "";
 
-  $("clearPanel").onclick = () => {
-    rounds.length = 0;
-    renderTimeline();
-    drawHeat();
-  };
-
-  function addRoundFromReveal(result, gameOver){
-    // cria registro da rodada
-    const item = {
-      round_num: result.round_num,
-      total: result.total,
-      winner: result.winner || null,
-      winners: result.winners || [],
-      hands: result.hands || {},
-      guesses: result.guesses || {},
-      game_over: gameOver || null,
-      balls_after: {} // preenchido quando chegar state depois do reveal
-    };
-
-    rounds.push(item);
-    while(rounds.length > maxRounds) rounds.shift();
-
-    renderTimeline();
-    drawHeat();
-  }
-
-  function updateLatestRoundSnapshotFromState(s){
-    if(!rounds.length) return;
-    // tenta preencher balls_after da última rodada quando o state já refletiu perdas
-    const last = rounds[rounds.length - 1];
-    const snap = {};
-    (s.players || []).forEach(p => { snap[p.name] = p.balls_left; });
-    last.balls_after = snap;
-    renderTimeline();
-    drawHeat();
-  }
-
-  function renderTimeline(){
-    const tl = $("timeline");
-    tl.innerHTML = "";
-
-    if(!rounds.length){
-      const div = document.createElement("div");
-      div.className = "subtitle";
-      div.textContent = "Sem rodadas ainda.";
-      tl.appendChild(div);
+    if (!matchHistory.length){
+      box.innerHTML = `<p class="subtitle" style="margin:0;">Sem rodadas ainda.</p>`;
       return;
     }
 
-    for(const r of rounds){
+    const reversed = [...matchHistory].reverse();
+    for (const item of reversed){
       const card = document.createElement("div");
-      card.className = "roundCard";
-
-      const badge = r.winner
-        ? `<span class="badge good">🏆 ${r.winner} acertou</span>`
-        : `<span class="badge none">ninguém acertou</span>`;
-
-      card.innerHTML = `
-        <div class="roundHead">
-          <div>
-            <div class="roundTitle">Rodada ${r.round_num}</div>
-            <div class="roundMeta">Total: <b>${r.total}</b></div>
-          </div>
-          ${badge}
-        </div>
-        <div class="stackBar" id="stack-${r.round_num}"></div>
-        <div class="stackLabel" id="legend-${r.round_num}"></div>
-        <div class="guessesRow" id="guesses-${r.round_num}"></div>
-        <div class="snapRow" id="snap-${r.round_num}"></div>
+      card.style.cssText = `
+        border: 1px solid rgba(255,255,255,0.10);
+        background: rgba(255,255,255,0.05);
+        border-radius: 14px;
+        padding: 12px;
       `;
 
-      // barra empilhada de mãos
-      const stack = card.querySelector(`#stack-${r.round_num}`);
-      const legend = card.querySelector(`#legend-${r.round_num}`);
+      const winTxt = item.winners && item.winners.length
+        ? `🏆 <b>${item.winners.join(", ")}</b> acertou(aram) e perdeu(deram) 1 bolinha.`
+        : (item.winner ? `🏆 <b>${item.winner}</b> acertou e perdeu 1 bolinha.` : `Ninguém acertou nesta rodada.`);
 
-      const entries = Object.entries(r.hands);
-      const total = Math.max(1, r.total);
+      const handsTxt = Object.entries(item.hands || {}).map(([n,v]) => `${n}: ${v}`).join(" • ") || "-";
+      const guessesTxt = Object.entries(item.guesses || {}).map(([n,v]) => `${n}: ${v}`).join(" • ") || "-";
 
-      stack.innerHTML = "";
-      legend.innerHTML = "";
-
-      for(const [name, hand] of entries){
-        const seg = document.createElement("div");
-        seg.className = "seg";
-        seg.style.background = colorForName(name);
-        seg.style.width = `${(hand / total) * 100}%`;
-        stack.appendChild(seg);
-
-        const li = document.createElement("span");
-        li.className = "legendItem";
-        li.innerHTML = `<span class="swatch" style="background:${colorForName(name)}"></span> ${name} (${hand})`;
-        legend.appendChild(li);
-      }
-
-      // palpites
-      const gRow = card.querySelector(`#guesses-${r.round_num}`);
-      gRow.innerHTML = "";
-      const gEntries = Object.entries(r.guesses);
-      if(!gEntries.length){
-        gRow.innerHTML = `<span class="subtitle" style="margin:0;">Sem palpites</span>`;
-      } else {
-        for(const [name, guess] of gEntries){
-          const chip = document.createElement("span");
-          const correct = (guess === r.total);
-          chip.className = "gChip" + (correct ? " correct" : "");
-          chip.textContent = `${name}: ${guess}`;
-          gRow.appendChild(chip);
-        }
-      }
-
-      // snapshot bolas após
-      const snap = card.querySelector(`#snap-${r.round_num}`);
-      snap.innerHTML = "";
-
-      const snapObj = r.balls_after || {};
-      const names = Object.keys(snapObj);
-      if(names.length){
-        for(const nm of names){
-          const line = document.createElement("div");
-          line.className = "snapLine";
-          const left = document.createElement("div");
-          left.className = "snapName";
-          left.textContent = nm;
-          const right = miniBallsHTML(snapObj[nm] ?? 0, 3);
-          line.appendChild(left);
-          line.appendChild(right);
-          snap.appendChild(line);
-        }
-      } else {
-        snap.innerHTML = `<span class="subtitle" style="margin:0;">(aguardando snapshot de bolinhas...)</span>`;
-      }
-
-      // fim de jogo
-      if(r.game_over){
-        const end = document.createElement("div");
-        end.style.marginTop = "10px";
-        end.innerHTML = `<span class="badge none">🧨 Fim — Perdedor: <b>${r.game_over.loser || "?"}</b></span>`;
-        card.appendChild(end);
-      }
-
-      tl.appendChild(card);
-    }
-
-    // scroll pro final (última rodada)
-    const wrap = tl.parentElement;
-    if(wrap) wrap.scrollLeft = wrap.scrollWidth;
-  }
-
-  function lerp(a,b,t){ return a + (b-a)*t; }
-  function colorForBalls(balls){
-    // 0 -> verde, 3 -> vermelho
-    const t = clamp(balls/3, 0, 1);
-    // verde (34,197,94) -> amarelo (245,158,11) -> vermelho (239,68,68)
-    if(t < 0.5){
-      const k = t/0.5;
-      const r = Math.round(lerp(34,245,k));
-      const g = Math.round(lerp(197,158,k));
-      const b = Math.round(lerp(94,11,k));
-      return `rgb(${r},${g},${b})`;
-    } else {
-      const k = (t-0.5)/0.5;
-      const r = Math.round(lerp(245,239,k));
-      const g = Math.round(lerp(158,68,k));
-      const b = Math.round(lerp(11,68,k));
-      return `rgb(${r},${g},${b})`;
+      card.innerHTML = `
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+          <span class="pill">Rodada <b>${item.round_num}</b></span>
+          <span class="pill">Total: <b>${item.total}</b></span>
+          <span class="pill">${winTxt}</span>
+        </div>
+        <div class="subtitle" style="margin-top:10px;"><b>Mãos:</b> ${handsTxt}</div>
+        <div class="subtitle" style="margin-top:6px;"><b>Palpites:</b> ${guessesTxt}</div>
+      `;
+      box.appendChild(card);
     }
   }
 
-  function drawHeat(){
-    const c = $("heatCanvas");
-    const ctx = c.getContext("2d");
-    const W = c.width, H = c.height;
-    ctx.clearRect(0,0,W,H);
+  function pushRevealToHistory(revealMsg){
+    if (!revealMsg || !revealMsg.result) return;
+    const r = revealMsg.result;
 
-    ctx.fillStyle = "rgba(255,255,255,0.02)";
-    ctx.fillRect(0,0,W,H);
-
-    if(!rounds.length || !state || !state.players){
-      ctx.fillStyle = "rgba(255,255,255,0.65)";
-      ctx.font = "16px system-ui";
-      ctx.fillText("Sem dados ainda (aguardando rodadas)...", 18, 40);
-      return;
-    }
-
-    const players = state.players.map(p => p.name);
-    const cols = rounds.length;
-    const rows = players.length;
-
-    const padL = 140;
-    const padT = 18;
-    const padR = 16;
-    const padB = 24;
-
-    const gridW = W - padL - padR;
-    const gridH = H - padT - padB;
-
-    const cellW = gridW / Math.max(1, cols);
-    const cellH = gridH / Math.max(1, rows);
-
-    // labels
-    ctx.fillStyle = "rgba(255,255,255,0.70)";
-    ctx.font = "12px system-ui";
-    players.forEach((nm, i) => {
-      ctx.fillText(nm, 16, padT + i*cellH + cellH*0.65);
+    matchHistory.push({
+      round_num: r.round_num,
+      total: r.total,
+      winner: r.winner || null,
+      winners: r.winners || null,
+      hands: r.hands || {},
+      guesses: r.guesses || {}
     });
 
-    // cells
-    for(let x=0; x<cols; x++){
-      const snap = rounds[x].balls_after || {};
-      for(let y=0; y<rows; y++){
-        const nm = players[y];
-        const balls = (snap[nm] ?? 0);
-        ctx.fillStyle = colorForBalls(balls);
-        const rx = padL + x*cellW + 2;
-        const ry = padT + y*cellH + 2;
-        ctx.fillRect(rx, ry, cellW-4, cellH-4);
-      }
-      // round number on bottom
-      ctx.fillStyle = "rgba(255,255,255,0.65)";
-      ctx.fillText(String(rounds[x].round_num), padL + x*cellW + 4, H - 8);
-    }
-
-    // border
-    ctx.strokeStyle = "rgba(255,255,255,0.18)";
-    ctx.strokeRect(padL, padT, gridW, gridH);
+    while (matchHistory.length > MAX_HISTORY) matchHistory.shift();
+    renderHistory();
   }
 
-  // ====== render state ======
-  function renderState(s){
+  function renderState(s) {
     state = s;
 
     $("phasePill").textContent = `fase: ${s.phase}`;
     $("roundPill").textContent = `rodada: ${s.round_num || "-"}`;
     $("roomPill").textContent = `sala: ${s.room_id || "-"}`;
     $("turnPill").textContent = s.turn_player_name ? `vez: ${s.turn_player_name}` : "vez: -";
-
-    const paused = !!s.paused;
-    $("pausePill").textContent = `pause: ${paused ? "SIM" : "NÃO"}`;
-
-    // prêmio (topo + ações)
-    const prize = (s.prize_text || "").trim();
-    const showPrize = prize ? prize : "-";
-    $("prizePillTop").textContent = `Prêmio: ${showPrize}`;
-    $("prizePillActions").textContent = `prêmio: ${showPrize}`;
-
-    // jogador da vez em ações
-    $("turnPillActions").textContent = `jogador da vez: ${s.turn_player_name || "-"}`;
-
-    // minha mão (privado vindo do servidor)
-    const myHand = (s.your_hand ?? null);
-    $("myHandPill").textContent = `minha mão: ${myHand === null ? "-" : myHand}`;
+    $("turnPill2").textContent = s.turn_player_name ? `jogador da vez: ${s.turn_player_name}` : "jogador da vez: -";
+    $("pausePill").textContent = `pause: ${s.paused ? "SIM" : "NÃO"}`;
 
     $("start").disabled = !(s.phase === "lobby" && isHost());
     $("restart").disabled = !isHost();
     $("skip").disabled = !(isHost() && (s.phase === "hands" || s.phase === "guesses"));
-    $("pauseBtn").disabled = !isHost();
-    $("setPrizeBtn").disabled = !isHost();
+    $("pause").disabled = !isHost();
+
+    $("setPrize").disabled = !isHost();
+    $("prizePill").textContent = `prêmio: ${s.prize || "-"}`;
 
     $("maxGuess").textContent = (s.max_guess ?? "-");
 
-    renderRollingGuesses(s);
+    renderGuessesRolling(s);
     renderOrderBar(s);
     renderPlayers(s);
+
+    // minha mão
+    $("myHandPill").textContent = `minha mão: ${myLastHand ?? "-"}`;
 
     const me = you();
     $("handAck").textContent = "";
     $("guessAck").textContent = "";
 
-    // se acabou de vir state após reveal, tenta preencher snapshot
-    if(s.phase === "hands" || s.phase === "guesses" || s.phase === "lobby"){
-      updateLatestRoundSnapshotFromState(s);
-    }
-
-    if(!me){
+    if (!me) {
       showBoxes({ waiting: true });
       $("waitingText").textContent = "Você ainda não foi reconhecido na sala.";
       return;
     }
 
-    if(!me.alive && s.phase !== "lobby"){
+    if (!me.alive && s.phase !== "lobby") {
       showBoxes({ waiting: true });
       $("waitingText").textContent = "Você está fora do jogo. Agora é espectador. 🍿";
       return;
     }
 
-    if(paused && s.phase !== "lobby"){
-      showBoxes({ waiting: true });
-      $("waitingText").textContent = isHost()
-        ? "Jogo pausado. Clique em Pausar de novo para voltar."
-        : "Jogo pausado pelo host. Aguarde voltar.";
-      return;
-    }
-
-    if(s.phase === "lobby"){
+    if (s.phase === "lobby") {
       showBoxes({ waiting: true });
       $("waitingText").textContent = isHost()
         ? "Você é o host. Quando tiver pelo menos 2 jogadores, clique em Iniciar."
@@ -1044,13 +661,19 @@
       return;
     }
 
-    if(s.phase === "hands"){
-      if(me.hand_submitted){
+    if (s.paused) {
+      showBoxes({ waiting: true });
+      $("waitingText").textContent = "Jogo pausado pelo host. ⏸️";
+      return;
+    }
+
+    if (s.phase === "hands") {
+      if (me.hand_submitted) {
         showBoxes({ waiting: true });
         $("waitingText").textContent = `Você já enviou sua mão. Aguardando... (Vez de: ${s.turn_player_name || "?"})`;
         return;
       }
-      if(s.turn_player_id !== me.player_id){
+      if (s.turn_player_id !== me.player_id) {
         showBoxes({ waiting: true });
         $("waitingText").textContent = `Aguardando... agora é a vez de ${s.turn_player_name || "alguém"}.`;
         return;
@@ -1058,18 +681,18 @@
       const maxHand = Math.min(3, me.balls_left);
       $("hand").max = String(maxHand);
       $("hand").value = "0";
-      renderHandQuick(maxHand);
+      renderHandQuick(maxHand); // ✅ 0..3 voltou
       showBoxes({ hand: true });
       return;
     }
 
-    if(s.phase === "guesses"){
-      if(me.guess_submitted){
+    if (s.phase === "guesses") {
+      if (me.guess_submitted) {
         showBoxes({ waiting: true });
         $("waitingText").textContent = `Você já enviou seu palpite. Aguardando... (Vez de: ${s.turn_player_name || "?"})`;
         return;
       }
-      if(s.turn_player_id !== me.player_id){
+      if (s.turn_player_id !== me.player_id) {
         showBoxes({ waiting: true });
         $("waitingText").textContent = `Aguardando... agora é a vez de ${s.turn_player_name || "alguém"}.`;
         return;
@@ -1087,45 +710,24 @@
       : "Revelando resultado...";
   }
 
-  // ===== WebSocket / envio =====
-  function send(type, payload = {}){
-    setError("");
-    if(!ws || ws.readyState !== 1){
-      setError("Você não está conectado.");
-      return;
-    }
-    ws.send(JSON.stringify({ type, ...payload }));
+  // ===== WS =====
+  function stopPing(){
+    if (pingTimer) { clearInterval(pingTimer); pingTimer = null; }
   }
-
   function startPing(){
     stopPing();
     pingTimer = setInterval(() => {
-      if(ws && ws.readyState === 1) send("ping");
+      if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type:"ping" }));
     }, 20000);
   }
-  function stopPing(){
-    if(pingTimer) clearInterval(pingTimer);
-    pingTimer = null;
-  }
 
-  function scheduleReconnect(){
-    if(manualClose) return;
-    if(reconnectTimer) return;
-    reconnectAttempts++;
-    const wait = Math.min(6000, 600 + reconnectAttempts * 700);
-    reconnectTimer = setTimeout(() => {
-      reconnectTimer = null;
-      connect();
-    }, wait);
-  }
-
-  function connect(){
+  function connect() {
     setError("");
     setHint("");
 
     const name = ($("name").value || "Jogador").trim();
     const room = currentRoom();
-    if(!room){ setError("Informe uma sala ou clique em Criar sala."); return; }
+    if (!room) { setError("Informe uma sala ou clique em Criar sala."); return; }
 
     const storedKey = localStorage.getItem(roomKeyStorageKey(room));
     const keyParam = storedKey ? `&key=${encodeURIComponent(storedKey)}` : "";
@@ -1137,18 +739,16 @@
     ws = new WebSocket(url);
 
     ws.onopen = () => {
-      reconnectAttempts = 0;
       setConnected(true);
       setHint(`Conectado na sala ${room}.`);
+      reconnectAttempts = 0;
       startPing();
-      $("chatHint").textContent = "Chat conectado ✅";
     };
 
     ws.onclose = () => {
       setConnected(false);
       stopPing();
-      $("chatHint").textContent = "Chat desconectado (tentando reconectar...)";
-      scheduleReconnect();
+      if (!manualClose) setHint("Desconectado. Clique em Conectar de novo.");
     };
 
     ws.onerror = () => setError("Erro no WebSocket.");
@@ -1156,84 +756,62 @@
     ws.onmessage = (ev) => {
       const msg = JSON.parse(ev.data);
 
-      if(msg.type === "error"){ setError(msg.message || "Erro."); return; }
+      if (msg.type === "error") { setError(msg.message || "Erro."); return; }
 
-      if(msg.type === "joined"){
+      if (msg.type === "joined") {
         playerId = msg.player_id;
         $("room").value = msg.room_id;
-        localStorage.setItem(roomKeyStorageKey(msg.room_id), msg.player_key);
+        if (msg.player_key) localStorage.setItem(roomKeyStorageKey(msg.room_id), msg.player_key);
         location.hash = msg.room_id;
         setHint(`Entrou na sala ${msg.room_id}.`);
         return;
       }
 
-      if(msg.type === "pong"){
+      if (msg.type === "state") { renderState(msg.state); return; }
+
+      if (msg.type === "reveal") {
+        // ✅ telinha 10 segundos (fim de rodada) — voltou
+        showRoundOverlay(msg.result);
+        // painel
+        pushRevealToHistory(msg);
         return;
       }
 
-      if(msg.type === "state"){
-        renderState(msg.state);
+      if (msg.type === "chat") {
+        addChatLine(msg.name, msg.text, msg.ts);
         return;
       }
 
-      if(msg.type === "reveal"){
-        // adiciona no painel bonito
-        addRoundFromReveal(msg.result, msg.game_over || null);
-        return;
-      }
-
-      if(msg.type === "chat"){
-        appendChat(msg.msg);
-        return;
-      }
+      if (msg.type === "pong") return;
     };
   }
 
-  // ===== Chat =====
-  function fmtTime(ts){
-    try{
-      const d = new Date(ts);
-      return d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
-    }catch{ return ""; }
+  function send(type, payload = {}) {
+    setError("");
+    if (!ws || ws.readyState !== 1) { setError("Você não está conectado."); return; }
+    ws.send(JSON.stringify({ type, ...payload }));
   }
 
-  function appendChat(m){
-    if(!m) return;
+  // ===== Chat =====
+  function addChatLine(name, text, ts){
     const box = $("chatLog");
-
-    const div = document.createElement("div");
-    div.className = "chatMsg";
-    const t = fmtTime(m.ts || Date.now());
-    div.innerHTML = `
-      <div class="chatMeta">
-        <b>${m.name || "?"}</b>
-        <span>${t}</span>
-      </div>
-      <div class="chatText"></div>
-    `;
-    div.querySelector(".chatText").textContent = m.text || "";
-    box.appendChild(div);
-
-    // autoscroll
+    const d = document.createElement("div");
+    const time = ts ? new Date(ts*1000).toLocaleTimeString() : new Date().toLocaleTimeString();
+    d.className = "subtitle";
+    d.style.margin = "0 0 6px";
+    d.innerHTML = `<b style="color: rgba(255,255,255,0.92)">${escapeHtml(name)}</b>
+      <span style="color: rgba(255,255,255,0.35)">[${time}]</span>: ${escapeHtml(text)}`;
+    box.appendChild(d);
     box.scrollTop = box.scrollHeight;
   }
-
-  $("chatSend").onclick = () => {
-    const text = ($("chatInput").value || "").trim();
-    if(!text) return;
-    send("chat", { text });
-    $("chatInput").value = "";
-  };
-  $("chatInput").addEventListener("keydown", (e) => {
-    if(e.key === "Enter"){
-      e.preventDefault();
-      $("chatSend").click();
-    }
-  });
-
-  $("reactSmile").onclick = () => send("react", { emoji: "😊" });
-  $("reactCry").onclick = () => send("react", { emoji: "😭" });
-  $("reactAngry").onclick = () => send("react", { emoji: "😡" });
+  function escapeHtml(s){
+    return String(s ?? "")
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
 
   // ===== UI binds =====
   $("create").onclick = async () => {
@@ -1249,7 +827,7 @@
 
   $("copyLink").onclick = async () => {
     const room = currentRoom();
-    if(!room) return setError("Sem sala para copiar link.");
+    if (!room) return setError("Sem sala para copiar link.");
     const url = `${location.origin}/#${room}`;
     try { await navigator.clipboard.writeText(url); setHint("Link copiado!"); }
     catch { setHint(url); }
@@ -1258,23 +836,20 @@
   $("start").onclick = () => send("start");
   $("restart").onclick = () => send("restart");
   $("skip").onclick = () => send("skip");
-  $("pauseBtn").onclick = () => send("pause");
-
-  $("setPrizeBtn").onclick = () => {
-    const txt = ($("prizeInput").value || "").trim();
-    send("set_prize", { text: txt });
-    $("prizeInput").value = "";
-  };
+  $("pause").onclick = () => send("pause");
+  $("setPrize").onclick = () => send("set_prize", { value: ($("prizeInput").value || "").trim() });
 
   $("sendHand").onclick = () => {
     const v = parseInt($("hand").value || "0", 10);
+    myLastHand = v; // ✅ cada jogador enxerga sua mão
+    $("myHandPill").textContent = `minha mão: ${myLastHand}`;
     send("hand", { value: v });
     $("handAck").textContent = "Mão enviada ✅";
   };
 
   $("sendGuess").onclick = () => {
     const v = parseInt($("guess").value || "0", 10);
-    if(state && state.used_guesses && state.used_guesses.includes(v)){
+    if (state && state.used_guesses && state.used_guesses.includes(v)) {
       setError("Esse palpite já foi usado. Escolha outro.");
       return;
     }
@@ -1282,12 +857,23 @@
     $("guessAck").textContent = "Palpite enviado ✅";
   };
 
+  $("sendChat").onclick = () => {
+    const t = ($("chatMsg").value || "").trim();
+    if (!t) return;
+    send("chat", { text: t });
+    $("chatMsg").value = "";
+  };
+  $("chatMsg").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") $("sendChat").click();
+  });
+
+  $("rSmile").onclick = () => send("react", { emoji: "🙂" });
+  $("rCry").onclick = () => send("react", { emoji: "😭" });
+  $("rAngry").onclick = () => send("react", { emoji: "😡" });
+
   window.addEventListener("load", () => {
-    const hash = (location.hash || "").replace("#","").trim().toUpperCase();
-    if(hash) $("room").value = hash;
-    setTab("timeline");
-    $("chatLog").innerHTML = `<div class="subtitle" style="margin:0;">Conecte para habilitar o chat.</div>`;
-    $("chatHint").textContent = "—";
+    const hash = (location.hash || "").replace("#", "").trim().toUpperCase();
+    if (hash) $("room").value = hash;
   });
 </script>
 </body>
